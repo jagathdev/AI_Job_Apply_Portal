@@ -158,7 +158,54 @@ export const InterviewPrep: React.FC = () => {
     );
   }
 
-  const rounds = guide.rounds || [];
+  // Map the disparate backend arrays into unified rounds that the UI expects
+  const rounds = [];
+  if (guide?.behavioralQuestions?.length) {
+    rounds.push({
+      name: 'Behavioral Questions',
+      questions: guide.behavioralQuestions.map((q: any) => ({
+        question: q.question,
+        idealAnswerSTAR: `Situation: ${q.situation}\nTask: ${q.task}\nAction: ${q.action}\nResult: ${q.result}`
+      }))
+    });
+  }
+  if (guide?.technicalQuestions?.length) {
+    rounds.push({
+      name: 'Technical Questions',
+      questions: guide.technicalQuestions.map((q: any) => ({
+        question: q.question,
+        idealAnswerSTAR: q.answer
+      }))
+    });
+  }
+  if (guide?.hrQuestions?.length) {
+    rounds.push({
+      name: 'HR Questions',
+      questions: guide.hrQuestions.map((q: any) => ({
+        question: q.question,
+        idealAnswerSTAR: q.answer
+      }))
+    });
+  }
+  if (guide?.scenarioQuestions?.length) {
+    rounds.push({
+      name: 'Scenario Questions',
+      questions: guide.scenarioQuestions.map((q: any) => ({
+        question: q.scenario,
+        idealAnswerSTAR: q.approach
+      }))
+    });
+  }
+  if (guide?.codingQuestions?.length) {
+    rounds.push({
+      name: 'Coding Questions',
+      questions: guide.codingQuestions.map((q: any) => ({
+        question: q.title,
+        idealAnswerSTAR: `Description: ${q.description}\nHint: ${q.hint}\nSolution:\n${q.solution}`
+      }))
+    });
+  }
+
   const activeRound = rounds[activeRoundIdx];
   const activeQuestion = activeRound?.questions?.[activeQuestionIdx];
 

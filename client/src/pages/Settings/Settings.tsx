@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { motion } from 'motion/react';
@@ -8,13 +8,58 @@ import {
 } from 'lucide-react';
 
 export const Settings: React.FC = () => {
-  const { theme, toggleTheme, logoutUser, showToast } = useApp();
+  const { theme, toggleTheme, logoutUser, showToast, token } = useApp();
   const navigate = useNavigate();
 
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [isChangingPass, setIsChangingPass] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // API Key States
+  const [groqKey, setGroqKey] = useState('');
+  const [geminiKey, setGeminiKey] = useState('');
+  const [groqApiKeySet, setGroqApiKeySet] = useState(false);
+  const [geminiApiKeySet, setGeminiApiKeySet] = useState(false);
+  const [isUpdatingKeys, setIsUpdatingKeys] = useState(false);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await axios.get('/api/profile');
+        setGroqApiKeySet(res.data.groqApiKeySet);
+        setGeminiApiKeySet(res.data.geminiApiKeySet);
+        if (res.data.groqApiKeySet) setGroqKey('••••••••••••••••');
+        if (res.data.geminiApiKeySet) setGeminiKey('••••••••••••••••');
+      } catch (err) {
+        console.error('Failed to load profile details.', err);
+      }
+    };
+    if (token) {
+      fetchProfile();
+    }
+  }, [token]);
+
+  const handleSaveApiKeys = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsUpdatingKeys(true);
+    try {
+      const payload: any = {};
+      if (groqKey !== '••••••••••••••••') payload.groqApiKey = groqKey;
+      if (geminiKey !== '••••••••••••••••') payload.geminiApiKey = geminiKey;
+
+      const res = await axios.put('/api/profile/api-keys', payload);
+      showToast('API keys updated successfully!', 'success');
+      setGroqApiKeySet(res.data.groqApiKeySet);
+      setGeminiApiKeySet(res.data.geminiApiKeySet);
+      if (res.data.groqApiKeySet) setGroqKey('••••••••••••••••');
+      if (res.data.geminiApiKeySet) setGeminiKey('••••••••••••••••');
+    } catch (err: any) {
+      showToast(err.response?.data?.error || 'Failed to update API keys.', 'error');
+    } finally {
+      setIsUpdatingKeys(false);
+    }
+  };
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -156,6 +201,56 @@ export const Settings: React.FC = () => {
                   className="px-4.5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all cursor-pointer shadow-sm disabled:opacity-40"
                 >
                   {isChangingPass ? 'Updating credentials...' : 'Change Password'}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Bento Block: Custom API Keys Configuration */}
+          <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 space-y-4 shadow-sm">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+              <KeyRound className="h-4.5 w-4.5" />
+              Custom AI API Keys (Fallback Chain Enabled)
+            </h3>
+            <p className="text-xs text-zinc-500">
+              Provide your own credentials to use custom models. The engine automatically falls back to system API keys if a key fails or is unconfigured.
+            </p>
+            
+            <form onSubmit={handleSaveApiKeys} className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-xl">
+              <div>
+                <label className="block text-[10px] uppercase font-bold text-zinc-400 mb-1 flex justify-between">
+                  <span>Groq API Key</span>
+                  {groqApiKeySet && <span className="text-green-500 normal-case font-medium">(Saved)</span>}
+                </label>
+                <input
+                  type="password"
+                  value={groqKey}
+                  placeholder="gsk_..."
+                  onChange={(e) => setGroqKey(e.target.value)}
+                  className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 p-2.5 text-xs outline-none dark:border-zinc-800 dark:bg-zinc-950 focus:bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase font-bold text-zinc-400 mb-1 flex justify-between">
+                  <span>Gemini API Key</span>
+                  {geminiApiKeySet && <span className="text-green-500 normal-case font-medium">(Saved)</span>}
+                </label>
+                <input
+                  type="password"
+                  value={geminiKey}
+                  placeholder="AIzaSy..."
+                  onChange={(e) => setGeminiKey(e.target.value)}
+                  className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 p-2.5 text-xs outline-none dark:border-zinc-800 dark:bg-zinc-950 focus:bg-white"
+                />
+              </div>
+
+              <div className="md:col-span-2 flex justify-end pt-2">
+                <button
+                  type="submit"
+                  disabled={isUpdatingKeys}
+                  className="px-4.5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all cursor-pointer shadow-sm disabled:opacity-40"
+                >
+                  {isUpdatingKeys ? 'Saving API keys...' : 'Save API Keys'}
                 </button>
               </div>
             </form>

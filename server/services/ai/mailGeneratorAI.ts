@@ -1,4 +1,4 @@
-import { callAI } from './grokService';
+import { callAI, CustomApiKeys } from './grokService';
 
 export interface MailDraftResult {
   subject: string;
@@ -12,7 +12,8 @@ export async function generateHREmail(
   companyName: string,
   jobTitle: string,
   userResumeText: string,
-  emailType: 'cold_outreach' | 'application_followup' | 'thank_you' = 'cold_outreach'
+  emailType: 'cold_outreach' | 'application_followup' | 'thank_you' = 'cold_outreach',
+  customApiKeys?: CustomApiKeys
 ): Promise<MailDraftResult> {
   const systemPrompt = `You are a professional career coach and copywriter.
 Generate a tailored recruitment email draft based on the company name, job title, and the candidate's resume background.
@@ -37,7 +38,7 @@ CANDIDATE RESUME BACK-BACKGROUND:
 ${userResumeText}
 `;
 
-  const aiResponse = await callAI(systemPrompt, userPrompt, true);
+  const aiResponse = await callAI(systemPrompt, userPrompt, true, customApiKeys);
   try {
     return JSON.parse(aiResponse) as MailDraftResult;
   } catch (err) {

@@ -1,4 +1,4 @@
-import { callAI } from './grokService';
+import { callAI, CustomApiKeys } from './grokService';
 
 export async function generateChatbotResponse(
   userMessage: string,
@@ -8,7 +8,8 @@ export async function generateChatbotResponse(
     companyJD?: string;
     atsScore?: number;
     interviewPrep?: string;
-  }
+  },
+  customApiKeys?: CustomApiKeys
 ): Promise<string> {
   const systemPrompt = `You are "AI Job Search Assistant" - a friendly, objective, senior technical coach and resume advisor.
 You are helping the user search for jobs, optimize their resumes, and prepare for interviews.
@@ -41,5 +42,5 @@ USER ACTIVE MESSAGE:
 ${userMessage}
 `;
 
-  return callAI(systemPrompt, userPrompt, false);
+  return callAI(systemPrompt, userPrompt, false, customApiKeys);
 }

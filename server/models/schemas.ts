@@ -10,7 +10,9 @@ const UserSchema = new Schema({
   createdAt: { type: Date, default: Date.now },
   themePreference: { type: String, default: 'dark' },
   avatar: { type: String, default: '' },
-  subscriptionStatus: { type: String, default: 'free' }
+  subscriptionStatus: { type: String, default: 'free' },
+  groqApiKey: { type: String, default: '' },
+  geminiApiKey: { type: String, default: '' }
 });
 
 // Company / JD Analysis Schema
@@ -98,6 +100,13 @@ const ATSReportSchema = new Schema({
   missingKeywords: { type: [String], default: [] },
   importantSkills: { type: [String], default: [] },
   suggestions: { type: [String], default: [] },
+  bulletPointComparisons: [{
+    original: String,
+    suggested: String,
+    section: String,
+    index: Number,
+    applied: { type: Boolean, default: false }
+  }],
   actionItems: [{
     task: String,
     completed: { type: Boolean, default: false }

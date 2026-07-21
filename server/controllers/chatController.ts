@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { ChatHistory, Resume, Company } from '../models/schemas';
+import { ChatHistory, Resume, Company, User } from '../models/schemas';
 import { generateChatbotResponse } from '../services/ai/chatbotAI';
 import { AuthRequest } from '../middlewares/auth';
 
@@ -43,13 +43,19 @@ export const sendChatMessage = async (req: AuthRequest, res: Response) => {
   // 3. Compile history and query context chatbot
   const chatLogs = history.messages.map(m => ({ sender: m.sender as 'user' | 'ai', text: m.text }));
   
+  const user = await User.findById(userId);
+  const customApiKeys = {
+    groqApiKey: user?.get('groqApiKey') || undefined,
+    geminiApiKey: user?.get('geminiApiKey') || undefined
+  };
+
   console.log('Fetching grounded chatbot reply from Grok AI...');
   const aiReplyText = await generateChatbotResponse(message, chatLogs, {
     resumeText,
     companyJD,
     atsScore,
     interviewPrep: activeCompanyId ? 'Active Prep Guide Configured' : undefined,
-  });
+  }, customApiKeys);
 
   // Push AI message
   history.messages.push({ sender: 'ai', text: aiReplyText, timestamp: new Date() });

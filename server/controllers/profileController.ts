@@ -9,7 +9,14 @@ export const getProfile = async (req: AuthRequest, res: Response) => {
   if (!user) {
     return res.status(404).json({ error: 'User not found.' });
   }
-  return res.status(200).json(user);
+  const userObj = user.toObject() as any;
+  return res.status(200).json({
+    ...userObj,
+    groqApiKey: userObj.groqApiKey ? `${userObj.groqApiKey.substring(0, 6)}...` : '',
+    geminiApiKey: userObj.geminiApiKey ? `${userObj.geminiApiKey.substring(0, 6)}...` : '',
+    groqApiKeySet: !!userObj.groqApiKey,
+    geminiApiKeySet: !!userObj.geminiApiKey
+  });
 };
 
 export const updateProfile = async (req: AuthRequest, res: Response) => {
@@ -40,6 +47,27 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
       profileCompletion: user.profileCompletion,
       subscriptionStatus: user.subscriptionStatus,
     },
+  });
+};
+
+export const updateApiKeys = async (req: AuthRequest, res: Response) => {
+  const userId = req.user?.id;
+  const { groqApiKey, geminiApiKey } = req.body;
+
+  const user = await User.findById(userId);
+  if (!user) {
+    return res.status(404).json({ error: 'User not found.' });
+  }
+
+  if (groqApiKey !== undefined) user.set('groqApiKey', groqApiKey);
+  if (geminiApiKey !== undefined) user.set('geminiApiKey', geminiApiKey);
+
+  await user.save();
+
+  return res.status(200).json({
+    message: 'API keys updated successfully.',
+    groqApiKeySet: !!user.get('groqApiKey'),
+    geminiApiKeySet: !!user.get('geminiApiKey'),
   });
 };
 

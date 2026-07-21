@@ -1,4 +1,4 @@
-import { callAI } from './grokService';
+import { callAI, CustomApiKeys } from './grokService';
 
 export interface CompanyAnalysisResult {
   companyName: string;
@@ -30,7 +30,10 @@ export interface CompanyAnalysisResult {
   importantNotes: string;
 }
 
-export async function analyzeCompanyJD(jobDescriptionText: string): Promise<CompanyAnalysisResult> {
+export async function analyzeCompanyJD(
+  jobDescriptionText: string,
+  customApiKeys?: CustomApiKeys
+): Promise<CompanyAnalysisResult> {
   const systemPrompt = `You are an expert AI recruiter and corporate intelligence analyst.
 Analyze the following Job Description (JD) text and extract detailed company/role information.
 You must return your response STRICTLY as a JSON object matching this EXACT structure. If any field is not present in the text, you must use your extensive industry knowledge to estimate or infer realistic values based on the company or industry, but clearly mark those inferred fields or keep them highly aligned with reality.
@@ -68,7 +71,7 @@ Structure to return:
 
   const userPrompt = `Job Description Text to analyze:\n\n${jobDescriptionText}`;
 
-  const aiResponse = await callAI(systemPrompt, userPrompt, true);
+  const aiResponse = await callAI(systemPrompt, userPrompt, true, customApiKeys);
   try {
     return JSON.parse(aiResponse) as CompanyAnalysisResult;
   } catch (err) {

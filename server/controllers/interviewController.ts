@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { InterviewPrep, Resume, Company } from '../models/schemas';
+import { InterviewPrep, Resume, Company, User } from '../models/schemas';
 import { generateInterviewPrep } from '../services/ai/interviewAI';
 import { callAI } from '../services/ai/grokService';
 import { AuthRequest } from '../middlewares/auth';
@@ -24,8 +24,14 @@ export const createInterviewPrepGuide = async (req: AuthRequest, res: Response) 
   const jobDescription = `Required Skills: ${company.requiredSkills.join(', ')}\nTech Stack: ${company.techStack.join(', ')}\nOverview: ${company.companyOverview}`;
   const resumeText = `Name: ${resume.personalInfo?.fullName}\nSkills: ${resume.skills.join(', ')}\nExperience:\n${resume.experience.map(e => `${e.role} at ${e.company}: ${e.description}`).join('\n')}`;
 
+  const user = await User.findById(userId);
+  const customApiKeys = {
+    groqApiKey: user?.get('groqApiKey') || undefined,
+    geminiApiKey: user?.get('geminiApiKey') || undefined
+  };
+
   console.log('Sending details to Interview Prep Guide generator...');
-  const prepData = await generateInterviewPrep(companyInfo, jobTitle, jobDescription, resumeText);
+  const prepData = await generateInterviewPrep(companyInfo, jobTitle, jobDescription, resumeText, customApiKeys);
 
   const newPrep = await InterviewPrep.create({
     userId,
@@ -81,8 +87,14 @@ QUESTION: ${question}
 CANDIDATE MOCK ANSWER: "${userAnswer}"
 `;
 
+  const user = await User.findById(req.user?.id);
+  const customApiKeys = {
+    groqApiKey: user?.get('groqApiKey') || undefined,
+    geminiApiKey: user?.get('geminiApiKey') || undefined
+  };
+
   console.log('Evaluating mock interview reply...');
-  const feedback = await callAI(systemPrompt, userPrompt, false);
+  const feedback = await callAI(systemPrompt, userPrompt, false, customApiKeys);
 
   return res.status(200).json({ feedback });
 };

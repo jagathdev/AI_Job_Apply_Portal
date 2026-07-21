@@ -1,10 +1,13 @@
 import crypto from 'crypto';
 import { AICache } from '../../models/schemas';
 
-// Current flagship model as of mid-2026. grok-2 was retired — using it now
-// returns "Model not found". Override via env var if xAI ships a newer
-// canonical ID; don't hardcode a fallback API key here or anywhere else.
-const GROK_MODEL = process.env.GROK_MODEL || 'grok-4.3';
+// Groq (GroqCloud) — OpenAI-compatible endpoint, NOT xAI. Key format is
+// "gsk_...". llama-3.3-70b-versatile / llama-3.1-8b-instant were deprecated
+// June 17, 2026 — openai/gpt-oss-120b (quality) and openai/gpt-oss-20b
+// (speed/cheap) are the current recommended replacements. Override via env
+// var if Groq ships a newer canonical ID; don't hardcode a fallback API key
+// here or anywhere else.
+const GROQ_MODEL = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
 
 function generateCacheKey(systemPrompt: string, userPrompt: string): string {
   return crypto
@@ -28,10 +31,16 @@ async function writeCache(cacheKey: string, response: string): Promise<void> {
   }
 }
 
+export interface CustomApiKeys {
+  groqApiKey?: string;
+  geminiApiKey?: string;
+}
+
 export async function callAI(
   systemPrompt: string,
   userPrompt: string,
-  jsonMode: boolean = false
+  jsonMode: boolean = false,
+  customApiKeys?: CustomApiKeys
 ): Promise<string> {
   const cacheKey = generateCacheKey(systemPrompt, userPrompt);
 
@@ -46,53 +55,59 @@ export async function callAI(
     console.error('AI cache lookup failed:', err);
   }
 
-  // 2. Call Grok with retry and timeout
-  let attempts = 0;
-  const maxAttempts = 2;
+  // Fallback keys order:
+  // 1. User's custom GROQ key
+  // 2. User's custom Gemini key
+  // 3. System env GROQ key
+  // 4. System env Gemini key
+
+  const keyChain = [];
+  if (customApiKeys?.groqApiKey) {
+    keyChain.push({ provider: 'groq', key: customApiKeys.groqApiKey, source: 'user' });
+  }
+  if (customApiKeys?.geminiApiKey) {
+    keyChain.push({ provider: 'gemini', key: customApiKeys.geminiApiKey, source: 'user' });
+  }
+  if (process.env.GROQ_API_KEY) {
+    keyChain.push({ provider: 'groq', key: process.env.GROQ_API_KEY, source: 'system' });
+  }
+  if (process.env.GEMINI_API_KEY) {
+    keyChain.push({ provider: 'gemini', key: process.env.GEMINI_API_KEY, source: 'system' });
+  }
+
+  if (keyChain.length === 0) {
+    throw new Error('No API keys configured (neither User Custom nor System Default).');
+  }
+
   let lastError: any = null;
 
-  while (attempts < maxAttempts) {
-    attempts++;
+  for (const item of keyChain) {
+    console.log(`Attempting AI call using ${item.source} ${item.provider} API key...`);
     try {
-      const response = await fetchWithTimeout(systemPrompt, userPrompt, jsonMode);
+      let response = '';
+      if (item.provider === 'groq') {
+        response = await fetchWithTimeout(systemPrompt, userPrompt, jsonMode, item.key);
+      } else {
+        response = await callGeminiWithRetry(systemPrompt, userPrompt, jsonMode, item.key);
+      }
       await writeCache(cacheKey, response);
       return response;
     } catch (error: any) {
-      console.error(`AI call attempt ${attempts} failed:`, error.message || error);
+      console.error(`AI call using ${item.source} ${item.provider} failed:`, error.message || error);
       lastError = error;
-      if (attempts < maxAttempts) {
-        console.log('Retrying AI call...');
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      }
     }
   }
 
-  // 3. Fallback to Gemini if Grok fails completely
-  console.warn('Grok API failed. Falling back to Gemini API for high availability...');
-  try {
-    const fallbackResponse = await callGeminiFallback(systemPrompt, userPrompt, jsonMode);
-    await writeCache(cacheKey, fallbackResponse);
-    return fallbackResponse;
-  } catch (geminiError: any) {
-    console.error('Fallback Gemini API also failed:', geminiError.message || geminiError);
-    throw new Error(
-      `AI service unavailable. Grok: ${lastError?.message || lastError}, Gemini: ${geminiError?.message || geminiError}`
-    );
-  }
+  throw new Error(`AI service completely unavailable. Last error: ${lastError?.message || lastError}`);
 }
 
 async function fetchWithTimeout(
   systemPrompt: string,
   userPrompt: string,
-  jsonMode: boolean
+  jsonMode: boolean,
+  apiKey: string
 ): Promise<string> {
-  const apiKey = process.env.GROK_API_KEY;
-  if (!apiKey) {
-    // Fail loudly instead of silently using a baked-in key.
-    throw new Error('GROK_API_KEY is not set in environment variables.');
-  }
-
-  const url = 'https://api.x.ai/v1/chat/completions';
+  const url = 'https://api.groq.com/openai/v1/chat/completions';
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -106,7 +121,7 @@ async function fetchWithTimeout(
       },
       signal: controller.signal,
       body: JSON.stringify({
-        model: GROK_MODEL,
+        model: GROQ_MODEL,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
@@ -120,13 +135,13 @@ async function fetchWithTimeout(
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Grok API HTTP ${response.status}: ${errorText}`);
+      throw new Error(`Groq API HTTP ${response.status}: ${errorText}`);
     }
 
     const data = (await response.json()) as any;
     const reply = data?.choices?.[0]?.message?.content;
     if (!reply) {
-      throw new Error('Grok API returned an empty reply.');
+      throw new Error('Groq API returned an empty reply.');
     }
     return reply;
   } catch (error: any) {
@@ -135,19 +150,63 @@ async function fetchWithTimeout(
   }
 }
 
+// Wraps the Gemini call with retry + exponential backoff, AND a model
+// fallback chain. A 503 "high demand" is often specific to one model
+// (usually whichever is newest/most popular) — a less-loaded model often
+// succeeds immediately even when the primary one is saturated.
+const GEMINI_MODEL_CHAIN = [
+  process.env.GEMINI_MODEL || 'gemini-3.5-flash',
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
+];
+
+async function callGeminiWithRetry(
+  systemPrompt: string,
+  userPrompt: string,
+  jsonMode: boolean,
+  apiKey: string
+): Promise<string> {
+  let lastError: any = null;
+
+  for (const model of GEMINI_MODEL_CHAIN) {
+    const maxAttempts = 2; // fewer retries per model since we have several models to try
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await callGeminiFallback(systemPrompt, userPrompt, jsonMode, model, apiKey);
+      } catch (error: any) {
+        lastError = error;
+        console.error(`Gemini (${model}) attempt ${attempt} failed:`, error.message || error);
+
+        // Don't retry on auth/config errors — they won't fix themselves.
+        const isRetryable =
+          error.message?.includes('HTTP 503') ||
+          error.message?.includes('HTTP 429') ||
+          error.message?.includes('HTTP 500');
+
+        if (!isRetryable) {
+          throw error; // auth/config problem — no point trying other models either
+        }
+
+        if (attempt < maxAttempts) {
+          const backoffMs = 1000 * Math.pow(2, attempt - 1); // 1s, 2s...
+          console.log(`Retrying ${model} in ${backoffMs}ms...`);
+          await new Promise((resolve) => setTimeout(resolve, backoffMs));
+        }
+      }
+    }
+    console.warn(`${model} exhausted retries, trying next model in chain...`);
+  }
+
+  throw lastError;
+}
+
 async function callGeminiFallback(
   systemPrompt: string,
   userPrompt: string,
-  jsonMode: boolean
+  jsonMode: boolean,
+  geminiModel: string,
+  apiKey: string
 ): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY is not defined in environment variables.');
-  }
-
-  // gemini-2.5-flash was retired for new API usage — gemini-3.5-flash is the
-  // current GA stable model. Override via GEMINI_MODEL if Google ships a newer one.
-  const geminiModel = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${apiKey}`;
 
   const controller = new AbortController();

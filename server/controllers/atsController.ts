@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { ATSReport, Resume, Company } from '../models/schemas';
+import { ATSReport, Resume, Company, User } from '../models/schemas';
 import { generateATSReport } from '../services/ai/atsScoreAI';
 import { AuthRequest } from '../middlewares/auth';
 
@@ -40,8 +40,14 @@ Experience: ${resume.experience?.map(e => `${e.role} at ${e.company}: ${e.descri
 Projects: ${resume.projects?.map(p => `${p.title} (${p.techStack?.join(', ')}): ${p.description}`).join('\n') || ''}
   `;
 
+  const user = await User.findById(userId);
+  const customApiKeys = {
+    groqApiKey: user?.get('groqApiKey') || undefined,
+    geminiApiKey: user?.get('geminiApiKey') || undefined
+  };
+
   console.log('Sending resume compile to ATS analysis engine...');
-  const reportData = await generateATSReport(resumeString, jobDescriptionText);
+  const reportData = await generateATSReport(resumeString, jobDescriptionText, customApiKeys);
 
   const report = await ATSReport.create({
     userId,

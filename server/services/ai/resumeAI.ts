@@ -1,4 +1,4 @@
-import { callAI } from './grokService';
+import { callAI, CustomApiKeys } from './grokService';
 
 export interface ResumeStructure {
   personalInfo: {
@@ -70,7 +70,10 @@ function safeParseResumeJSON(aiResponse: string, context: string): ResumeStructu
   }
 }
 
-export async function parseResumeText(rawText: string): Promise<ResumeStructure> {
+export async function parseResumeText(
+  rawText: string,
+  customApiKeys?: CustomApiKeys
+): Promise<ResumeStructure> {
   const systemPrompt = `You are a state-of-the-art Applicant Tracking System (ATS) parser.
 Your task is to take the raw, unstructured text of a resume and extract it into a structured JSON object.
 Ensure that you clean up formatting, standardize dates, and place values into the appropriate fields.
@@ -120,13 +123,14 @@ Return your response strictly as a JSON object with this structure:
 }`;
 
   const userPrompt = `Raw resume text to parse:\n\n${rawText}`;
-  const aiResponse = await callAI(systemPrompt, userPrompt, true);
+  const aiResponse = await callAI(systemPrompt, userPrompt, true, customApiKeys);
   return safeParseResumeJSON(aiResponse, 'structured resume');
 }
 
 export async function rewriteResume(
   currentResume: ResumeStructure,
-  targetJD: string
+  targetJD: string,
+  customApiKeys?: CustomApiKeys
 ): Promise<ResumeStructure> {
   const systemPrompt = `You are an elite executive resume writer.
 Your task is to tailor the user's resume so that it is optimized for the provided Job Description (JD).
@@ -186,6 +190,6 @@ TARGET JOB DESCRIPTION:
 ${targetJD}
 `;
 
-  const aiResponse = await callAI(systemPrompt, userPrompt, true);
+  const aiResponse = await callAI(systemPrompt, userPrompt, true, customApiKeys);
   return safeParseResumeJSON(aiResponse, 'tailored resume');
 }

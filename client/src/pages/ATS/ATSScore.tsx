@@ -27,7 +27,8 @@ export const ATSScore: React.FC = () => {
         resumeId: activeResume._id,
         companyId: activeCompany._id
       });
-      setReport(res.data);
+      // The backend returns { message: string, report: ATSReport }
+      setReport(res.data.report || res.data);
       showToast('ATS Compliance Report ready!', 'success');
     } catch (err) {
       showToast('Failed to run ATS comparison.', 'error');
@@ -124,9 +125,9 @@ export const ATSScore: React.FC = () => {
               {/* ATS Score card */}
               <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 text-center space-y-2">
                 <span className="text-[10px] uppercase font-bold text-zinc-400">ATS Compliance</span>
-                <div className="text-4xl font-black text-indigo-600 dark:text-indigo-400">{report.score}/100</div>
+                <div className="text-4xl font-black text-indigo-600 dark:text-indigo-400">{report.overallScore}/100</div>
                 <div className="h-2 bg-zinc-100 rounded-full overflow-hidden dark:bg-zinc-800">
-                  <div className="h-full bg-indigo-600" style={{ width: `${report.score}%` }} />
+                  <div className="h-full bg-indigo-600" style={{ width: `${report.overallScore}%` }} />
                 </div>
                 <p className="text-[10px] text-zinc-400">Target threshold: 75% for enterprise ATS parsers.</p>
               </div>
@@ -134,9 +135,9 @@ export const ATSScore: React.FC = () => {
               {/* Keyword Match card */}
               <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 text-center space-y-2">
                 <span className="text-[10px] uppercase font-bold text-zinc-400">Keyword Density</span>
-                <div className="text-4xl font-black text-purple-600 dark:text-purple-400">{report.keywordMatchPercentage}%</div>
+                <div className="text-4xl font-black text-purple-600 dark:text-purple-400">{report.keywordMatchScore}%</div>
                 <div className="h-2 bg-zinc-100 rounded-full overflow-hidden dark:bg-zinc-800">
-                  <div className="h-full bg-purple-600" style={{ width: `${report.keywordMatchPercentage}%` }} />
+                  <div className="h-full bg-purple-600" style={{ width: `${report.keywordMatchScore}%` }} />
                 </div>
                 <p className="text-[10px] text-zinc-400">Density of target stack tools parsed.</p>
               </div>
@@ -145,7 +146,7 @@ export const ATSScore: React.FC = () => {
               <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 text-center space-y-3 flex flex-col justify-center">
                 <span className="text-[10px] uppercase font-bold text-zinc-400">AI Evaluation</span>
                 <span className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 text-sm font-black tracking-tight uppercase">
-                  {report.rating}
+                  {report.overallScore >= 80 ? 'EXCELLENT' : report.overallScore >= 60 ? 'GOOD' : 'NEEDS IMPROVEMENT'}
                 </span>
               </div>
 

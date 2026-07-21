@@ -41,6 +41,7 @@ import {
 import {
   getProfile,
   updateProfile,
+  updateApiKeys,
   changePassword,
   exportUserData,
   deleteAccount
@@ -116,6 +117,7 @@ router.delete('/chat/clear', authenticateToken as any, asyncHandler(clearChatHis
 // ==========================================
 router.get('/profile', authenticateToken as any, asyncHandler(getProfile));
 router.put('/profile', authenticateToken as any, asyncHandler(updateProfile));
+router.put('/profile/api-keys', authenticateToken as any, asyncHandler(updateApiKeys));
 router.put('/profile/security', authenticateToken as any, asyncHandler(changePassword));
 router.get('/profile/export', authenticateToken as any, asyncHandler(exportUserData));
 router.post('/profile/delete', authenticateToken as any, asyncHandler(deleteAccount));

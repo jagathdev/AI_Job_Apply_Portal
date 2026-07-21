@@ -2,7 +2,7 @@ import { Response } from 'express';
 import * as _pdfParse from 'pdf-parse';
 const pdfParse: any = (_pdfParse as any).default || _pdfParse;
 import mammoth from 'mammoth';
-import { Resume, Company } from '../models/schemas';
+import { Resume, Company, User } from '../models/schemas';
 import { parseResumeText, rewriteResume } from '../services/ai/resumeAI';
 import { AuthRequest } from '../middlewares/auth';
 
@@ -35,8 +35,14 @@ export const uploadAndParseResume = async (req: any, res: Response) => {
       return res.status(422).json({ error: 'Failed to extract text. The document might be scanned/empty.' });
     }
 
+    const user = await User.findById(userId);
+    const customApiKeys = {
+      groqApiKey: user?.get('groqApiKey') || undefined,
+      geminiApiKey: user?.get('geminiApiKey') || undefined
+    };
+
     console.log('Sending extracted text to Grok AI for structuring...');
-    const parsedResume = await parseResumeText(rawText);
+    const parsedResume = await parseResumeText(rawText, customApiKeys);
 
     // Save to database
     const savedResume = await Resume.create({
@@ -65,8 +71,14 @@ export const parseTextResume = async (req: AuthRequest, res: Response) => {
     return res.status(400).json({ error: 'Resume text must be at least 50 characters.' });
   }
 
+  const user = await User.findById(userId);
+  const customApiKeys = {
+    groqApiKey: user?.get('groqApiKey') || undefined,
+    geminiApiKey: user?.get('geminiApiKey') || undefined
+  };
+
   console.log('Parsing manually pasted resume...');
-  const parsedResume = await parseResumeText(resumeText);
+  const parsedResume = await parseResumeText(resumeText, customApiKeys);
 
   const savedResume = await Resume.create({
     userId,
@@ -164,7 +176,13 @@ export const tailorResumeToJob = async (req: AuthRequest, res: Response) => {
     interests: resume.interests,
   };
 
-  const rewrittenData = await rewriteResume(currentResumeData, jobDescription);
+  const user = await User.findById(userId);
+  const customApiKeys = {
+    groqApiKey: user?.get('groqApiKey') || undefined,
+    geminiApiKey: user?.get('geminiApiKey') || undefined
+  };
+
+  const rewrittenData = await rewriteResume(currentResumeData, jobDescription, customApiKeys);
 
   // Save tailored resume as a new document
   const savedTailored = await Resume.create({

@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { Company, SavedJob, AppliedJob } from '../models/schemas';
+import { Company, SavedJob, AppliedJob, User } from '../models/schemas';
 import { analyzeCompanyJD } from '../services/ai/companyAnalysisAI';
 import { AuthRequest } from '../middlewares/auth';
 
@@ -77,8 +77,13 @@ export const analyzeJobDescription = async (req: AuthRequest, res: Response) => 
     return res.status(400).json({ error: 'Job description must be at least 100 characters long.' });
   }
 
-  console.log('Sending Job Description to Grok AI for company analysis...');
-  const analysis = await analyzeCompanyJD(finalJdText);
+  const user = await User.findById(userId);
+  const customApiKeys = {
+    groqApiKey: user?.get('groqApiKey') || undefined,
+    geminiApiKey: user?.get('geminiApiKey') || undefined
+  };
+
+  const analysis = await analyzeCompanyJD(finalJdText, customApiKeys);
 
   // Save Company/JD Analysis to MongoDB
   const savedCompany = await Company.create({

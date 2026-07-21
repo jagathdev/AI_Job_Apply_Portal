@@ -1,4 +1,4 @@
-import { callAI } from './grokService';
+import { callAI, CustomApiKeys } from './grokService';
 
 export interface InterviewRound {
   name: string;
@@ -66,7 +66,8 @@ export async function generateInterviewPrep(
   companyInfo: string,
   jobTitle: string,
   jobDescription: string,
-  userResume: string
+  userResume: string,
+  customApiKeys?: CustomApiKeys
 ): Promise<InterviewPrepResult> {
   const systemPrompt = `You are an elite Lead Engineer and Technical Recruiter.
 Generate an exhaustive, highly tailored, premium interview preparation guide based on the company's profile, job description, and the user's specific resume and experience.
@@ -124,7 +125,7 @@ USER RESUME / EXPERIENCES:
 ${userResume}
 `;
 
-  const aiResponse = await callAI(systemPrompt, userPrompt, true);
+  const aiResponse = await callAI(systemPrompt, userPrompt, true, customApiKeys);
   try {
     return JSON.parse(aiResponse) as InterviewPrepResult;
   } catch (err) {

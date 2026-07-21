@@ -145,7 +145,7 @@ export const ResumeBuilder: React.FC = () => {
       const res = await axios.post('/api/resume/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      
+
       setActiveResume(res.data.resume);
       setResumes(prev => [res.data.resume, ...prev]);
       showToast('Resume uploaded, parsed, and structured!', 'success');
@@ -234,12 +234,9 @@ export const ResumeBuilder: React.FC = () => {
     }));
   };
 
-  const handleExportHTML = () => {
-    if (!activeResume) return;
+  const generateHTMLTemplate = () => {
     const personal = editorState.personalInfo;
-    
-    // Create print stylesheet ready html file
-    const docHtml = `
+    return `
 <!DOCTYPE html>
 <html>
 <head>
@@ -323,21 +320,49 @@ export const ResumeBuilder: React.FC = () => {
 </body>
 </html>
     `;
+  };
 
-    const blob = new Blob([docHtml], { type: 'text/html' });
+  const handleExportPDF = () => {
+    if (!activeResume) return;
+    const docHtml = generateHTMLTemplate();
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.width = '0px';
+    iframe.style.height = '0px';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (doc) {
+      doc.open();
+      doc.write(docHtml);
+      doc.close();
+      setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        setTimeout(() => document.body.removeChild(iframe), 1000);
+      }, 500);
+      showToast('Preparing PDF. Please click Save in the print dialog.', 'info');
+    }
+  };
+
+  const handleExportDOCX = () => {
+    if (!activeResume) return;
+    const docHtml = generateHTMLTemplate();
+    const blob = new Blob(['\ufeff', docHtml], { type: 'application/msword' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${personal.fullName.replace(/\s+/g, '_')}_ATS_Tailored_Resume.html`;
+    link.download = `${editorState.personalInfo.fullName.replace(/\s+/g, '_') || 'Resume'}_ATS_Tailored.doc`;
     link.click();
     URL.revokeObjectURL(url);
-    showToast('Print-perfect HTML resume downloaded successfully! Open it in browser and Save to PDF.', 'success');
+    showToast('DOCX exported successfully!', 'success');
   };
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-zinc-50 px-4 py-8 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 transition-colors duration-300">
       <div className="mx-auto max-w-7xl space-y-8">
-        
+
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-5">
           <div>
@@ -388,10 +413,10 @@ export const ResumeBuilder: React.FC = () => {
 
         {/* Triple Panel Layout */}
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-          
+
           {/* Panel 1: Document Section Editors (span 4) */}
           <div className="xl:col-span-4 rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900 shadow-sm space-y-6">
-            
+
             {/* Form Section Selector */}
             <div className="flex border-b border-zinc-150 dark:border-zinc-800 pb-2.5 gap-3.5 overflow-x-auto">
               {[
@@ -405,11 +430,10 @@ export const ResumeBuilder: React.FC = () => {
                 <button
                   key={sect.id}
                   onClick={() => setActiveTab(sect.id as any)}
-                  className={`pb-1 text-[11px] font-bold tracking-tight border-b-2 whitespace-nowrap transition-all cursor-pointer ${
-                    activeTab === sect.id
+                  className={`pb-1 text-[11px] font-bold tracking-tight border-b-2 whitespace-nowrap transition-all cursor-pointer ${activeTab === sect.id
                       ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
                       : 'border-transparent text-zinc-400 hover:text-zinc-600'
-                  }`}
+                    }`}
                 >
                   {sect.label}
                 </button>
@@ -417,7 +441,7 @@ export const ResumeBuilder: React.FC = () => {
             </div>
 
             <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1">
-              
+
               {/* Contact Editor */}
               {activeTab === 'info' && (
                 <div className="space-y-3">
@@ -723,25 +747,17 @@ export const ResumeBuilder: React.FC = () => {
 
           {/* Panel 2: Real-time Live Document Preview (span 5) */}
           <div className="xl:col-span-5 rounded-2xl border border-zinc-200 bg-zinc-200/50 p-5 dark:border-zinc-900 dark:bg-zinc-950/40 shadow-sm flex flex-col">
-            
+
             <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-zinc-300 dark:border-zinc-800">
               <span className="flex items-center gap-1.5 text-xs font-bold text-zinc-500">
                 <Eye className="h-4.5 w-4.5" />
                 Interactive Document Preview
               </span>
-
-              <button
-                onClick={handleExportHTML}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-300 bg-white hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 text-[10px] font-bold shadow-sm cursor-pointer"
-              >
-                <Download className="h-3.5 w-3.5" />
-                Export print HTML
-              </button>
             </div>
 
             {/* Document sheet */}
             <div className="flex-1 bg-white p-6 shadow-md border border-zinc-300 dark:border-zinc-900 rounded-xl max-h-[620px] overflow-y-auto text-zinc-800 font-sans text-left transition-colors duration-200">
-              
+
               {/* Document Header */}
               <div className="text-center space-y-1 mb-5">
                 <h2 className="text-xl font-bold tracking-tight text-zinc-900 uppercase">{editorState.personalInfo.fullName || 'Candidate Name'}</h2>
@@ -831,99 +847,66 @@ export const ResumeBuilder: React.FC = () => {
               )}
 
             </div>
-
           </div>
 
-          {/* Panel 3: AI Optimizer Sidebar (span 3) */}
-          <div className="xl:col-span-3 rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900 shadow-sm space-y-6 flex flex-col">
-            
-            {/* ATS Score Dial */}
-            <div className="text-center space-y-2 border-b border-zinc-100 dark:border-zinc-800 pb-5">
-              <span className="block text-[10px] uppercase font-bold text-zinc-400">ATS Match Gauge</span>
-              <div className="flex items-center justify-center">
-                <div className="relative h-24 w-24 flex items-center justify-center rounded-full bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900">
-                  <span className="text-2xl font-black">{atsScore}%</span>
+          {/* Panel 3: Export & AI Sidebar (span 3) */}
+          <div className="xl:col-span-3 rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900 shadow-sm flex flex-col h-fit space-y-6">
+
+              {/* Download Actions */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold uppercase text-zinc-400">Export Resume</h3>
+
+                <button
+                  onClick={handleExportPDF}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-950/30 dark:text-red-400 py-3 text-xs font-bold transition-all cursor-pointer border border-red-100 dark:border-red-900/50"
+                >
+                  <Download className="h-4.5 w-4.5" />
+                  Download as PDF
+                </button>
+
+                <button
+                  onClick={handleExportDOCX}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-950/30 dark:text-blue-400 py-3 text-xs font-bold transition-all cursor-pointer border border-blue-100 dark:border-blue-900/50"
+                >
+                  <FileText className="h-4.5 w-4.5" />
+                  Download as DOCX
+                </button>
+              </div>
+
+              {/* Master AI Rewrite trigger */}
+              <div className="border-t border-zinc-150 dark:border-zinc-800 pt-5 mt-5">
+                <div className="mb-4">
+                  <label className="block text-[10px] uppercase font-bold text-zinc-400 mb-2">Target Job Context</label>
+                  {activeCompany ? (
+                    <div className="p-3 rounded-xl border border-purple-100 bg-purple-50/50 dark:border-purple-900/40 text-[11px]">
+                      <span className="block font-bold truncate text-zinc-800 dark:text-zinc-200">{activeCompany.jobTitle}</span>
+                      <span className="block text-zinc-500 truncate mt-0.5">{activeCompany.companyName}</span>
+                    </div>
+                  ) : (
+                    <textarea
+                      value={pastedJd}
+                      onChange={(e) => setPastedJd(e.target.value)}
+                      placeholder="Paste JD text here to tailor resume"
+                      rows={2}
+                      className="w-full rounded-xl border border-zinc-200 bg-zinc-50 p-2.5 text-[11px] outline-none focus:bg-white dark:bg-zinc-950 dark:border-zinc-800"
+                    />
+                  )}
                 </div>
-              </div>
-              <p className="text-[10px] text-zinc-400">Matches direct JD keyword frequencies.</p>
-            </div>
 
-            {/* Keyword gaps */}
-            <div className="space-y-2.5">
-              <h3 className="text-xs font-bold flex items-center gap-1.5">
-                <ListCheck className="h-4 w-4 text-purple-500" />
-                Missing Keywords Gap
-              </h3>
-              <div className="flex flex-wrap gap-1">
-                {missingKeywords.length > 0 ? (
-                  missingKeywords.slice(0, 10).map((kw, i) => (
-                    <span key={i} className="text-[9px] font-semibold px-2 py-0.5 rounded bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400 border border-red-100 dark:border-red-950/30">
-                      {kw}
-                    </span>
-                  ))
-                ) : (
-                  <span className="text-[10px] text-zinc-400">All matching keywords present!</span>
-                )}
-              </div>
-            </div>
+                <button
+                  onClick={handleTailorResume}
+                  disabled={isTailoring || (!activeCompany && !pastedJd)}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 py-3 text-xs font-bold text-white shadow-lg shadow-indigo-500/20 disabled:opacity-40 transition-all cursor-pointer hover:shadow-indigo-500/40 hover:-translate-y-0.5"
+                >
+                  <Brain className={`h-4.5 w-4.5 ${isTailoring ? 'animate-spin' : 'animate-pulse'}`} />
+                  {isTailoring ? 'Tailoring with Grok...' : 'AI STAR Rewrite'}
+                </button>
 
-            {/* Strengths / Weaknesses checklists */}
-            <div className="space-y-4 border-t border-zinc-150 dark:border-zinc-800 pt-4 flex-1">
-              <div className="space-y-1.5">
-                <h4 className="text-[11px] font-bold text-emerald-600 uppercase">Core Strengths</h4>
-                <ul className="text-[10px] text-zinc-500 space-y-1">
-                  {strengths.map((str, i) => (
-                    <li key={i} className="flex items-start gap-1">
-                      <CheckCircle className="h-3 w-3 text-emerald-500 mt-0.5 shrink-0" />
-                      {str}
-                    </li>
-                  ))}
-                </ul>
+                <p className="text-[10px] text-center text-zinc-500 mt-4 leading-relaxed">
+                  Clicking this will automatically rewrite your experience bullet points to match the JD, seamlessly adding any missing keywords, closing the gap, and boosting your ATS score instantly.
+                </p>
               </div>
 
-              {weaknesses.length > 0 && (
-                <div className="space-y-1.5 pt-2">
-                  <h4 className="text-[11px] font-bold text-amber-600 uppercase">Optimization Tips</h4>
-                  <ul className="text-[10px] text-zinc-500 space-y-1">
-                    {weaknesses.map((w, i) => (
-                      <li key={i} className="flex items-start gap-1">
-                        <span className="h-1 w-1 bg-amber-500 rounded-full mt-1.5 shrink-0" />
-                        {w}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-
-            {/* Master AI Rewrite trigger */}
-            <div className="border-t border-zinc-150 dark:border-zinc-800 pt-4">
-              <div className="mb-4">
-                <label className="block text-[10px] uppercase font-bold text-zinc-400 mb-1">Target Job Context</label>
-                {activeCompany ? (
-                  <div className="p-2.5 rounded-lg border border-purple-100 bg-purple-50/20 dark:border-purple-900 text-[10px]">
-                    <span className="block font-bold truncate">{activeCompany.jobTitle}</span>
-                    <span className="block text-zinc-400 truncate">{activeCompany.companyName}</span>
-                  </div>
-                ) : (
-                  <textarea
-                    value={pastedJd}
-                    onChange={(e) => setPastedJd(e.target.value)}
-                    placeholder="Paste JD text here to tailor resume"
-                    rows={2}
-                    className="w-full rounded-lg border border-zinc-200 bg-zinc-50 p-2 text-[10px] outline-none"
-                  />
-                )}
-              </div>
-
-              <button
-                onClick={handleTailorResume}
-                disabled={isTailoring || (!activeCompany && !pastedJd)}
-                className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 py-3 text-xs font-bold text-white shadow-md disabled:opacity-40 transition-all cursor-pointer"
-              >
-                <Brain className="h-4.5 w-4.5 animate-pulse" />
-                {isTailoring ? 'Tailoring with Grok...' : 'AI STAR Rewrite'}
-              </button>
             </div>
 
           </div>
@@ -931,6 +914,5 @@ export const ResumeBuilder: React.FC = () => {
         </div>
 
       </div>
-    </div>
   );
 };
