@@ -86,7 +86,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('job_search_token', userToken);
     localStorage.setItem('job_search_user', JSON.stringify(userData));
     axios.defaults.headers.common['Authorization'] = `Bearer ${userToken}`;
-    
+
     // Set theme based on user preferences
     if (userData.themePreference) {
       setTheme(userData.themePreference);
@@ -113,13 +113,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTheme(nextTheme);
     applyThemeClass(nextTheme);
     localStorage.setItem('job_search_theme', nextTheme);
-    
+
     // If user is logged in, optionally persist preference
     if (user) {
       const updatedUser = { ...user, themePreference: nextTheme };
       setUser(updatedUser);
       localStorage.setItem('job_search_user', JSON.stringify(updatedUser));
-      
+
       axios.put('/api/profile', { themePreference: nextTheme })
         .catch(err => console.error('Failed to sync theme preference:', err));
     }
@@ -128,7 +128,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
     const id = Math.random().toString(36).substring(2, 9);
     setToasts((prev) => [...prev, { id, message, type }]);
-    
+
     // Auto remove after 4 seconds
     setTimeout(() => {
       removeToast(id);
