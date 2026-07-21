@@ -14,8 +14,19 @@ async function startServer() {
   await connectDB();
 
   // 2. Middlewares
+  const allowedOrigins = [
+    'http://localhost:5173',
+    'https://ai-job-apply-portal.vercel.app'
+  ];
+  if (process.env.FRONTEND_URL) {
+    allowedOrigins.push(process.env.FRONTEND_URL);
+  }
+  if (process.env.CORS_ORIGIN) {
+    allowedOrigins.push(process.env.CORS_ORIGIN);
+  }
+
   app.use(cors({
-    origin: ['http://localhost:5173', 'https://ai-job-apply-portal.vercel.app'],
+    origin: allowedOrigins,
     credentials: true,
   }));
   app.use(express.json({ limit: '10mb' }));
