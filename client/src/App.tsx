@@ -27,13 +27,13 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 // Public Route Guard (prevents logged-in users from seeing login/register again)
 const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { token } = useApp();
-  return !token ? <>{children}</> : <Navigate to="/dashboard" replace />;
+  return !token ? <>{children}</> : <Navigate to="/home" replace />;
 };
 
 const AppContent: React.FC = () => {
   return (
     <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 transition-colors duration-300">
-      
+
       {/* Global Toast Alerts */}
       <ToastContainer />
 
