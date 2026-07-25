@@ -165,10 +165,10 @@ export const Home: React.FC = () => {
             AI Application Pipeline Active
           </motion.div>
 
-          <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-tight">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight leading-tight text-balance break-words">
             Accelerate Your Job Application Journey
           </h1>
-          <p className="text-sm md:text-base text-zinc-300 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-xs sm:text-sm md:text-base text-zinc-300 max-w-2xl mx-auto leading-relaxed text-balance">
             Our AI-guided suite helps you analyze company cultures, tailor resume experience bullets utilizing Grok AI, and prepare custom mock interviews. Follow the checklist below to land your role.
           </p>
 
@@ -199,7 +199,7 @@ export const Home: React.FC = () => {
         <div className="space-y-6 max-w-4xl mx-auto">
           
           {/* STEP 1: AUTHENTICATION */}
-          <div className="flex gap-4 p-5 rounded-2xl border border-emerald-200/50 bg-emerald-500/5 dark:border-emerald-950/40 dark:bg-emerald-950/5 relative overflow-hidden">
+          <div className="flex flex-col sm:flex-row gap-4 p-5 rounded-2xl border border-emerald-200/50 bg-emerald-500/5 dark:border-emerald-950/40 dark:bg-emerald-950/5 relative overflow-hidden">
             <div className="absolute top-0 right-0 h-24 w-24 bg-emerald-500/5 rounded-full translate-x-8 -translate-y-8" />
             
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 border border-emerald-200/40 shrink-0">
@@ -219,7 +219,7 @@ export const Home: React.FC = () => {
           </div>
 
           {/* STEP 2: JD ANALYSIS */}
-          <div className={`flex gap-4 p-5 rounded-2xl border transition-all ${
+          <div className={`flex flex-col sm:flex-row gap-4 p-5 rounded-2xl border transition-all ${
             isJobAnalyzed 
               ? 'border-emerald-200 bg-emerald-500/5 dark:border-emerald-950/40 dark:bg-emerald-950/5' 
               : 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 shadow-sm'
@@ -349,7 +349,7 @@ export const Home: React.FC = () => {
           </div>
 
           {/* STEP 3: COMPANY CULTURE SCREEN */}
-          <div className={`flex gap-4 p-5 rounded-2xl border transition-all ${
+          <div className={`flex flex-col sm:flex-row gap-4 p-5 rounded-2xl border transition-all ${
             isJobAnalyzed 
               ? 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 shadow-sm' 
               : 'opacity-55 bg-zinc-50 dark:bg-zinc-900/10 border-zinc-200 dark:border-zinc-850'
@@ -378,7 +378,7 @@ export const Home: React.FC = () => {
           </div>
 
           {/* STEP 4: RESUME BUILDER */}
-          <div className={`flex gap-4 p-5 rounded-2xl border transition-all ${
+          <div className={`flex flex-col sm:flex-row gap-4 p-5 rounded-2xl border transition-all ${
             isResumeUploaded 
               ? 'border-emerald-200 bg-emerald-500/5 dark:border-emerald-950/40 dark:bg-emerald-950/5' 
               : 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 shadow-sm'
@@ -425,7 +425,7 @@ export const Home: React.FC = () => {
           </div>
 
           {/* STEP 5: RESUME TAILORING */}
-          <div className={`flex gap-4 p-5 rounded-2xl border transition-all ${
+          <div className={`flex flex-col sm:flex-row gap-4 p-5 rounded-2xl border transition-all ${
             isResumeUploaded && isJobAnalyzed && isTailored
               ? 'border-emerald-200 bg-emerald-500/5 dark:border-emerald-950/40 dark:bg-emerald-950/5' 
               : isResumeUploaded && isJobAnalyzed
@@ -468,7 +468,7 @@ export const Home: React.FC = () => {
           </div>
 
           {/* STEP 6: ATS FIT CARD */}
-          <div className={`flex gap-4 p-5 rounded-2xl border transition-all ${
+          <div className={`flex flex-col sm:flex-row gap-4 p-5 rounded-2xl border transition-all ${
             isResumeUploaded && isJobAnalyzed 
               ? 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 shadow-sm' 
               : 'opacity-55 bg-zinc-50 dark:bg-zinc-900/10 border-zinc-200 dark:border-zinc-850'
@@ -497,7 +497,7 @@ export const Home: React.FC = () => {
           </div>
 
           {/* STEP 7: INTERVIEW PREPARATION */}
-          <div className={`flex gap-4 p-5 rounded-2xl border transition-all ${
+          <div className={`flex flex-col sm:flex-row gap-4 p-5 rounded-2xl border transition-all ${
             isJobAnalyzed 
               ? 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 shadow-sm' 
               : 'opacity-55 bg-zinc-50 dark:bg-zinc-900/10 border-zinc-200 dark:border-zinc-850'

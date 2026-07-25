@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import crypto from 'crypto';
 import { ATSReport, Resume, Company, User } from '../models/schemas';
 import { generateATSReport } from '../services/ai/atsScoreAI';
 import { AuthRequest } from '../middlewares/auth';
@@ -31,6 +32,22 @@ export const createATSReport = async (req: AuthRequest, res: Response) => {
     return res.status(400).json({ error: 'Please select a valid Job Description or enter a custom text.' });
   }
 
+  // Deduplication Check
+  let existingReport = null;
+  let customJdHash = undefined;
+
+  if (companyId) {
+    existingReport = await ATSReport.findOne({ userId, resumeId, companyId }).sort({ createdAt: -1 });
+  } else if (customJdText) {
+    customJdHash = crypto.createHash('md5').update(customJdText.trim()).digest('hex');
+    existingReport = await ATSReport.findOne({ userId, resumeId, customJdHash }).sort({ createdAt: -1 });
+  }
+
+  if (existingReport) {
+    console.log('ATS Report deduplication hit! Returning existing report.');
+    return res.status(200).json(existingReport);
+  }
+
   // Compile full string from resume fields to feed to ATS engine
   const resumeString = `
 Name: ${resume.personalInfo?.fullName || ''}
@@ -53,6 +70,7 @@ Projects: ${resume.projects?.map(p => `${p.title} (${p.techStack?.join(', ')}): 
     userId,
     resumeId,
     companyId: companyId || null,
+    customJdHash,
     ...reportData,
   });
 

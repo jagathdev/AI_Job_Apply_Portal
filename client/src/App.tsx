@@ -14,7 +14,7 @@ import { Register } from './pages/Register/Register';
 import { Dashboard } from './pages/Dashboard/Dashboard';
 import { CompanyDetails } from './pages/Company/CompanyDetails';
 import { ResumeBuilder } from './pages/ResumeBuilder/ResumeBuilder';
-import { ATSScore } from './pages/ATS/ATSScore';
+
 import { InterviewPrep } from './pages/Interview/InterviewPrep';
 import { Settings } from './pages/Settings/Settings';
 
@@ -56,7 +56,6 @@ const AppContent: React.FC = () => {
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/company/:id" element={<ProtectedRoute><CompanyDetails /></ProtectedRoute>} />
           <Route path="/resume-builder" element={<ProtectedRoute><ResumeBuilder /></ProtectedRoute>} />
-          <Route path="/ats-score" element={<ProtectedRoute><ATSScore /></ProtectedRoute>} />
           <Route path="/interview-preparation" element={<ProtectedRoute><InterviewPrep /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 

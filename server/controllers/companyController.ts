@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import crypto from 'crypto';
 import { Company, SavedJob, AppliedJob, User } from '../models/schemas';
 import { analyzeCompanyJD } from '../services/ai/companyAnalysisAI';
 import { AuthRequest } from '../middlewares/auth';
@@ -16,7 +17,7 @@ async function scrapeJobURL(url: string): Promise<string> {
       },
       signal: controller.signal,
     });
-    
+
     clearTimeout(timeoutId);
 
     if (!res.ok) {
@@ -24,7 +25,7 @@ async function scrapeJobURL(url: string): Promise<string> {
     }
 
     const html = await res.text();
-    
+
     // Simple HTML-to-text conversion: strip styles, scripts, and tags
     let text = html
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
@@ -77,6 +78,17 @@ export const analyzeJobDescription = async (req: AuthRequest, res: Response) => 
     return res.status(400).json({ error: 'Job description must be at least 100 characters long.' });
   }
 
+  // Deduplication Check
+  const jdHash = crypto.createHash('md5').update(finalJdText.trim()).digest('hex');
+  const existingCompany = await Company.findOne({ userId, jdHash });
+  if (existingCompany) {
+    console.log('Company analysis deduplication hit! Returning existing record.');
+    return res.status(200).json({
+      message: 'Job analysis loaded from cache successfully.',
+      company: existingCompany,
+    });
+  }
+
   const user = await User.findById(userId);
   const customApiKeys = {
     groqApiKey: user?.get('groqApiKey') || undefined,
@@ -88,6 +100,7 @@ export const analyzeJobDescription = async (req: AuthRequest, res: Response) => 
   // Save Company/JD Analysis to MongoDB
   const savedCompany = await Company.create({
     userId,
+    jdHash,
     ...analysis,
   });
 

@@ -216,8 +216,8 @@ export const CompanyDetails: React.FC = () => {
         {/* Header Block */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-zinc-200 dark:border-zinc-800 pb-6">
           <div className="flex items-start gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-650 text-white shadow-xl shadow-indigo-500/10">
-              <Sparkles className="h-7 w-7" />
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-650 text-white shadow-xl shadow-indigo-500/10 text-2xl font-bold uppercase">
+              {company.companyName ? company.companyName.charAt(0) : <Sparkles className="h-7 w-7" />}
             </div>
             <div>
               <h1 className="text-2xl font-black tracking-tight">{company.jobTitle}</h1>
@@ -247,14 +247,6 @@ export const CompanyDetails: React.FC = () => {
             >
               <Bookmark className={`h-4 w-4 ${isSaved ? 'fill-current' : ''}`} />
               {isSaved ? 'Bookmarked' : 'Bookmark Job'}
-            </button>
-            <button
-              onClick={handleLogApplication}
-              disabled={isLogging}
-              className="flex items-center gap-1.5 px-5 py-2.5 rounded-full text-xs font-bold bg-gradient-to-r from-indigo-600 to-violet-650 text-white hover:from-indigo-700 hover:to-violet-750 shadow-lg shadow-indigo-500/25 transition-all duration-300 transform hover:scale-[1.03] active:scale-95 cursor-pointer disabled:opacity-50"
-            >
-              <ClipboardCheck className="h-4 w-4" />
-              Log as Applied
             </button>
           </div>
         </div>
@@ -468,10 +460,10 @@ export const CompanyDetails: React.FC = () => {
               </div>
 
               {/* Bottom Pagination */}
-              <div className="flex justify-between pt-6 border-t border-zinc-200 dark:border-zinc-800 mt-4">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pt-6 border-t border-zinc-200 dark:border-zinc-800 mt-4">
                 <Link
                   to="/dashboard"
-                  className="flex items-center gap-1.5 px-4.5 py-2.5 rounded-xl border border-zinc-200 bg-white hover:bg-indigo-50/40 hover:border-indigo-200/50 hover:text-indigo-600 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:!bg-indigo-950/30 dark:hover:!border-indigo-900/40 dark:hover:!text-indigo-400 text-zinc-700 dark:text-zinc-300 text-xs font-bold transition-all cursor-pointer duration-200 hover:-translate-x-0.5"
+                  className="flex items-center justify-center gap-1.5 px-4.5 py-3 sm:py-2.5 rounded-xl border border-zinc-200 bg-white hover:bg-indigo-50/40 hover:border-indigo-200/50 hover:text-indigo-600 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:!bg-indigo-950/30 dark:hover:!border-indigo-900/40 dark:hover:!text-indigo-400 text-zinc-700 dark:text-zinc-300 text-xs font-bold transition-all cursor-pointer duration-200 hover:-translate-x-0.5 w-full sm:w-auto whitespace-nowrap shrink-0"
                 >
                   <ChevronLeft className="h-4 w-4" />
                   Back to Dashboard
@@ -481,7 +473,7 @@ export const CompanyDetails: React.FC = () => {
                     setActiveTab('stack');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-500/10 transition-all cursor-pointer duration-200 hover:translate-x-0.5"
+                  className="flex items-center justify-center gap-1.5 px-5 py-3 sm:py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-500/10 transition-all cursor-pointer duration-200 hover:translate-x-0.5 w-full sm:w-auto whitespace-nowrap shrink-0"
                 >
                   Next: Products & Tech Stack
                   <ArrowRight className="h-4 w-4" />
@@ -599,13 +591,13 @@ export const CompanyDetails: React.FC = () => {
               </div>
 
               {/* Bottom Pagination */}
-              <div className="flex justify-between pt-6 border-t border-zinc-200 dark:border-zinc-800 mt-6">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pt-6 border-t border-zinc-200 dark:border-zinc-800 mt-6">
                 <button
                   onClick={() => {
                     setActiveTab('profile');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  className="flex items-center gap-1.5 px-4.5 py-2.5 rounded-xl border border-zinc-200 bg-white hover:bg-indigo-50/40 hover:border-indigo-200/50 hover:text-indigo-600 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:!bg-indigo-950/30 dark:hover:!border-indigo-900/40 dark:hover:!text-indigo-400 text-zinc-700 dark:text-zinc-300 text-xs font-bold transition-all cursor-pointer duration-200 hover:-translate-x-0.5"
+                  className="flex items-center justify-center gap-1.5 px-4.5 py-3 sm:py-2.5 rounded-xl border border-zinc-200 bg-white hover:bg-indigo-50/40 hover:border-indigo-200/50 hover:text-indigo-600 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:!bg-indigo-950/30 dark:hover:!border-indigo-900/40 dark:hover:!text-indigo-400 text-zinc-700 dark:text-zinc-300 text-xs font-bold transition-all cursor-pointer duration-200 hover:-translate-x-0.5 w-full sm:w-auto whitespace-nowrap shrink-0"
                 >
                   <ChevronLeft className="h-4 w-4" />
                   Back: Company Profile
@@ -615,7 +607,7 @@ export const CompanyDetails: React.FC = () => {
                     setActiveTab('culture');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-500/10 transition-all cursor-pointer duration-200 hover:translate-x-0.5"
+                  className="flex items-center justify-center gap-1.5 px-5 py-3 sm:py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-500/10 transition-all cursor-pointer duration-200 hover:translate-x-0.5 w-full sm:w-auto whitespace-nowrap shrink-0"
                 >
                   Next: Culture & Benefits
                   <ArrowRight className="h-4 w-4" />
@@ -701,13 +693,13 @@ export const CompanyDetails: React.FC = () => {
               </div>
 
               {/* Bottom Pagination */}
-              <div className="flex justify-between pt-6 border-t border-zinc-200 dark:border-zinc-800 mt-4">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pt-6 border-t border-zinc-200 dark:border-zinc-800 mt-4">
                 <button
                   onClick={() => {
                     setActiveTab('stack');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  className="flex items-center gap-1.5 px-4.5 py-2.5 rounded-xl border border-zinc-200 bg-white hover:bg-indigo-50/40 hover:border-indigo-200/50 hover:text-indigo-600 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:!bg-indigo-950/30 dark:hover:!border-indigo-900/40 dark:hover:!text-indigo-400 text-zinc-700 dark:text-zinc-300 text-xs font-bold transition-all cursor-pointer duration-200 hover:-translate-x-0.5"
+                  className="flex items-center justify-center gap-1.5 px-4.5 py-3 sm:py-2.5 rounded-xl border border-zinc-200 bg-white hover:bg-indigo-50/40 hover:border-indigo-200/50 hover:text-indigo-600 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:!bg-indigo-950/30 dark:hover:!border-indigo-900/40 dark:hover:!text-indigo-400 text-zinc-700 dark:text-zinc-300 text-xs font-bold transition-all cursor-pointer duration-200 hover:-translate-x-0.5 w-full sm:w-auto whitespace-nowrap shrink-0"
                 >
                   <ChevronLeft className="h-4 w-4" />
                   Back: Products & Tech Stack
@@ -717,7 +709,7 @@ export const CompanyDetails: React.FC = () => {
                     setActiveTab('interview');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-500/10 transition-all cursor-pointer duration-200 hover:translate-x-0.5"
+                  className="flex items-center justify-center gap-1.5 px-5 py-3 sm:py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-500/10 transition-all cursor-pointer duration-200 hover:translate-x-0.5 w-full sm:w-auto whitespace-nowrap shrink-0"
                 >
                   Next: Recruitment & Interviews
                   <ArrowRight className="h-4 w-4" />
@@ -849,27 +841,27 @@ export const CompanyDetails: React.FC = () => {
                 </div>
               </div>
 
-              {/* Bottom Pagination */}
-              <div className="flex justify-between pt-6 border-t border-zinc-200 dark:border-zinc-800 mt-6">
+              {/* Navigation Actions */}
+              <div className="flex items-center justify-between pt-8 border-t border-zinc-200 dark:border-zinc-800 mt-8 mb-4">
                 <button
                   onClick={() => {
                     setActiveTab('culture');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  className="flex items-center gap-1.5 px-4.5 py-2.5 rounded-xl border border-zinc-200 bg-white hover:bg-indigo-50/40 hover:border-indigo-200/50 hover:text-indigo-600 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:!bg-indigo-950/30 dark:hover:!border-indigo-900/40 dark:hover:!text-indigo-400 text-zinc-700 dark:text-zinc-300 text-xs font-bold transition-all cursor-pointer duration-200 hover:-translate-x-0.5"
+                  className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-5 py-2.5 text-sm font-bold text-zinc-700 shadow-sm hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 transition-all cursor-pointer"
                 >
-                  <ChevronLeft className="h-4 w-4" />
-                  Back: Culture & Benefits
+                  <ArrowLeft className="h-4 w-4" />
+                  Back (Culture & Benefits)
                 </button>
                 <button
                   onClick={() => {
                     navigate('/resume-builder');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-650 hover:from-indigo-700 hover:to-purple-750 text-white text-xs font-bold shadow-lg shadow-indigo-500/20 transition-all cursor-pointer duration-200 hover:translate-x-0.5"
+                  className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-indigo-700 transition-all cursor-pointer"
                 >
-                  Open Resume Builder
-                  <ChevronRight className="h-4 w-4 animate-pulse shrink-0" />
+                  Next (Resume Builder)
+                  <ArrowRight className="h-4 w-4" />
                 </button>
               </div>
             </motion.div>

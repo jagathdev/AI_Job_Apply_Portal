@@ -4,6 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI Job Search Assistant</title>
+    <style>
+      body {
+        background-color: #09090b; /* zinc-950 */
+        color: #fafafa;
+      }
+      html:not(.dark) body {
+        background-color: #fafafa; /* zinc-50 */
+        color: #18181b;
+      }
+    </style>
     <script>
       if (localStorage.getItem('job_search_theme') === 'light') {
         document.documentElement.classList.remove('dark');

@@ -18,6 +18,7 @@ const UserSchema = new Schema({
 // Company / JD Analysis Schema
 const CompanySchema = new Schema({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  jdHash: { type: String, index: true },
   companyName: { type: String, required: true },
   jobTitle: { type: String, required: true },
   department: { type: String, default: 'N/A' },
@@ -60,7 +61,8 @@ const ResumeSchema = new Schema({
     phone: { type: String, default: '' },
     location: { type: String, default: '' },
     website: { type: String, default: '' },
-    linkedIn: { type: String, default: '' }
+    linkedIn: { type: String, default: '' },
+    github: { type: String, default: '' }
   },
   summary: { type: String, default: '' },
   skills: { type: [String], default: [] },
@@ -95,6 +97,7 @@ const ATSReportSchema = new Schema({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   resumeId: { type: Schema.Types.ObjectId, ref: 'Resume' },
   companyId: { type: Schema.Types.ObjectId, ref: 'Company' },
+  customJdHash: { type: String, index: true },
   overallScore: { type: Number, required: true },
   skillsMatchScore: { type: Number, required: true },
   keywordMatchScore: { type: Number, required: true },

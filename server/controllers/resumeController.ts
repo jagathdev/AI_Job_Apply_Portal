@@ -149,10 +149,15 @@ export const tailorResumeToJob = async (req: AuthRequest, res: Response) => {
   }
 
   let jobDescription = '';
+  let shortName = 'ATS';
+
   if (companyId) {
     const company = await Company.findOne({ _id: companyId, userId });
     if (company) {
       jobDescription = `${company.jobTitle} at ${company.companyName}\nRequired: ${company.requiredSkills.join(', ')}\nOverview: ${company.companyOverview}`;
+      const cName = company.companyName.replace(/\s+/g, '_');
+      const jTitle = company.jobTitle.replace(/\s+/g, '_');
+      shortName = `${cName}_${jTitle}_ATS`;
     }
   } else if (customJdText) {
     jobDescription = customJdText;
@@ -187,7 +192,7 @@ export const tailorResumeToJob = async (req: AuthRequest, res: Response) => {
   // Save tailored resume as a new document
   const savedTailored = await Resume.create({
     userId,
-    name: `${resume.name} (ATS Tailored)`,
+    name: shortName,
     rawText: resume.rawText,
     ...rewrittenData,
   });

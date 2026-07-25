@@ -97,7 +97,7 @@ export const ChatbotWidget: React.FC = () => {
   if (!user) return null; // Chatbot is a secure feature
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end">
       <AnimatePresence>
         {!isOpen && (
           <motion.button
@@ -124,7 +124,7 @@ export const ChatbotWidget: React.FC = () => {
             initial={{ opacity: 0, y: 50, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 50, scale: 0.95 }}
-            className="flex h-[550px] w-[380px] flex-col rounded-2xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950 overflow-hidden"
+            className="flex h-[75vh] max-h-[600px] sm:h-[550px] w-[calc(100vw-2rem)] sm:w-[380px] flex-col rounded-2xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950 overflow-hidden"
           >
             {/* Header */}
             <div className="flex items-center justify-between bg-gradient-to-r from-indigo-900 to-indigo-800 px-4.5 py-4 text-white">

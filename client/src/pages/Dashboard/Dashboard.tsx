@@ -8,7 +8,7 @@ import {
   CheckCircle2, Bookmark, HelpCircle, MapPin, DollarSign,
   Layers, ArrowRight, ShieldCheck, Trash2, Search,
   PlusCircle, BookOpen, AlertCircle, RefreshCw, BarChart4,
-  ExternalLink, ChevronDown
+  ExternalLink, ChevronDown, Home
 } from 'lucide-react';
 
 interface ResumeItem {
@@ -226,13 +226,22 @@ export const Dashboard: React.FC = () => {
               </p>
             </div>
 
-            <button
-              onClick={fetchDashboardData}
-              className="flex items-center gap-1.5 self-start px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-zinc-200 hover:text-white border border-white/10 text-xs font-bold transition-all cursor-pointer"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-              Refresh Dashboard
-            </button>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Link
+                to="/home"
+                className="flex items-center gap-1.5 self-start px-3.5 py-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-200 hover:text-white border border-indigo-500/20 text-xs font-bold transition-all cursor-pointer"
+              >
+                <Home className="h-3.5 w-3.5" />
+                Back to Home
+              </Link>
+              <button
+                onClick={fetchDashboardData}
+                className="flex items-center gap-1.5 self-start px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-zinc-200 hover:text-white border border-white/10 text-xs font-bold transition-all cursor-pointer"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Refresh Dashboard
+              </button>
+            </div>
           </div>
 
           {/* KPI Dashboard Cards */}
@@ -360,11 +369,11 @@ export const Dashboard: React.FC = () => {
 
           {/* Activity Graph Card */}
           <div className="lg:col-span-2 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 shadow-sm flex flex-col justify-between">
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
               <h3 className="text-sm font-black flex items-center gap-1.5 text-zinc-800 dark:text-zinc-100">
                 Job Confirmation Score Progression
               </h3>
-              <span className="text-[10px] font-black px-2.5 py-1 rounded bg-indigo-50 dark:bg-indigo-950/40 text-indigo-650 dark:text-indigo-400 uppercase tracking-wide">
+              <span className="shrink-0 text-[10px] font-black px-2.5 py-1 rounded bg-indigo-50 dark:bg-indigo-950/40 text-indigo-650 dark:text-indigo-400 uppercase tracking-wide">
                 AI Analytics
               </span>
             </div>
@@ -429,7 +438,7 @@ export const Dashboard: React.FC = () => {
 
                   {/* SVG Gradient definitions */}
                   <defs>
-                    <linearGradient id="indigo-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <linearGradient id="indigo-grad" x1="0%" y1="0%" x2="100%" y2="0%" gradientUnits="userSpaceOnUse">
                       <stop offset="0%" stopColor="#6366f1" />
                       <stop offset="50%" stopColor="#a855f7" />
                       <stop offset="100%" stopColor="#10b981" />
@@ -449,35 +458,35 @@ export const Dashboard: React.FC = () => {
         <div className="w-full space-y-6">
 
           {/* Header Tabs */}
-          <div className="flex border-b border-zinc-200 dark:border-zinc-800">
+          <div className="flex justify-start w-full border-b border-zinc-200 dark:border-zinc-800 overflow-x-auto scrollbar-hide">
             <button
               onClick={() => { setActiveTab('applied'); setSearchQuery(''); }}
-              className={`py-3.5 px-5 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 cursor-pointer ${activeTab === 'applied'
+              className={`py-3.5 px-5 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${activeTab === 'applied'
                 ? 'border-indigo-650 text-indigo-650 dark:border-indigo-400 dark:text-indigo-400'
                 : 'border-transparent text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
                 }`}
             >
-              <Briefcase className="h-4 w-4" />
+              <Briefcase className="h-4 w-4 shrink-0" />
               My Job List ({appliedJobs.length})
             </button>
             <button
               onClick={() => { setActiveTab('resumes'); setSearchQuery(''); }}
-              className={`py-3.5 px-5 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 cursor-pointer ${activeTab === 'resumes'
+              className={`py-3.5 px-5 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${activeTab === 'resumes'
                 ? 'border-indigo-650 text-indigo-650 dark:border-indigo-400 dark:text-indigo-400'
                 : 'border-transparent text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
                 }`}
             >
-              <FileText className="h-4 w-4" />
+              <FileText className="h-4 w-4 shrink-0" />
               My Resumes ({resumes.length})
             </button>
             <button
               onClick={() => { setActiveTab('bookmarks'); setSearchQuery(''); }}
-              className={`py-3.5 px-5 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 cursor-pointer ${activeTab === 'bookmarks'
+              className={`py-3.5 px-5 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${activeTab === 'bookmarks'
                 ? 'border-indigo-650 text-indigo-650 dark:border-indigo-400 dark:text-indigo-400'
                 : 'border-transparent text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
                 }`}
             >
-              <Bookmark className="h-4 w-4" />
+              <Bookmark className="h-4 w-4 shrink-0" />
               Bookmarked ({savedJobs.length})
             </button>
           </div>

@@ -277,26 +277,7 @@ export const InterviewPrep: React.FC = () => {
     <div className="min-h-[calc(100vh-4rem)] bg-zinc-50 px-4 py-8 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 transition-colors duration-300">
       <div className="mx-auto max-w-5xl space-y-6">
 
-        {/* Previous Step back link */}
-        <div className="flex items-center justify-between">
-          <Link
-            to="/ats-score"
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to ATS Score
-          </Link>
 
-          {evaluatedQuestionsCount > 0 && (
-            <button
-              onClick={calculateFinalConfirmationScore}
-              className="flex items-center gap-1.5 px-4.5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-xs font-bold shadow-md cursor-pointer transition-all"
-            >
-              <Award className="h-4.5 w-4.5" />
-              Show My Final Score
-            </button>
-          )}
-        </div>
 
         {/* Header Block */}
         <div className="border-b border-zinc-200 dark:border-zinc-800 pb-5">
@@ -334,7 +315,7 @@ export const InterviewPrep: React.FC = () => {
                         }}
                         className={`w-full text-left p-3 rounded-xl text-xs font-bold transition-all border flex items-center justify-between cursor-pointer ${activeRoundIdx === idx
                           ? 'bg-indigo-600 border-indigo-700 text-white shadow-sm'
-                          : 'border-zinc-150 bg-zinc-50/50 hover:bg-zinc-100 dark:border-zinc-800/50 dark:bg-zinc-950/20 text-zinc-600 dark:text-zinc-400'
+                          : 'border-zinc-150 bg-zinc-50/50 hover:bg-indigo-50 hover:border-indigo-100 hover:text-indigo-600 dark:border-zinc-800/50 dark:bg-zinc-950/20 dark:hover:bg-indigo-900/20 dark:hover:border-indigo-800/30 dark:hover:text-indigo-400 text-zinc-600 dark:text-zinc-400'
                           }`}
                       >
                         <span className="truncate pr-1">{round.name}</span>
@@ -365,7 +346,7 @@ export const InterviewPrep: React.FC = () => {
                         }}
                         className={`w-full text-left p-2.5 rounded-xl text-xs transition-all border flex items-center justify-between gap-2 cursor-pointer ${activeQuestionIdx === idx
                           ? 'border-indigo-600 bg-indigo-50/20 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-bold'
-                          : 'border-transparent hover:bg-zinc-50 dark:hover:bg-zinc-950/20 text-zinc-500'
+                          : 'border-transparent hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-900/20 dark:hover:text-indigo-400 text-zinc-500'
                           }`}
                       >
                         <span className="truncate flex-1">
@@ -409,13 +390,17 @@ export const InterviewPrep: React.FC = () => {
                   </div>
 
                   {/* Ideal Expandable review */}
-                  <div>
+                  <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
                     <button
                       type="button"
                       onClick={() => setShowIdeal(!showIdeal)}
-                      className="text-xs font-bold text-zinc-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1 cursor-pointer"
+                      className="w-full flex items-center justify-between bg-zinc-50 dark:bg-zinc-950/40 p-4 text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors cursor-pointer"
                     >
-                      {showIdeal ? 'Hide Model Structure Guidance' : 'Reveal Model STAR Answer Guideline'}
+                      <span className="flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-indigo-500" />
+                        Model STAR Answer Guideline
+                      </span>
+                      <ChevronDown className={`h-4 w-4 text-zinc-400 transition-transform ${showIdeal ? 'rotate-180' : ''}`} />
                     </button>
 
                     <AnimatePresence>
@@ -424,9 +409,11 @@ export const InterviewPrep: React.FC = () => {
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: 'auto' }}
                           exit={{ opacity: 0, height: 0 }}
-                          className="mt-3 p-4 rounded-xl border border-indigo-50 bg-indigo-50/20 dark:border-indigo-950 dark:bg-indigo-950/10 text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed overflow-hidden whitespace-pre-wrap"
+                          className="border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden"
                         >
-                          {activeQuestion.idealAnswerSTAR}
+                          <div className="p-4 text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">
+                            {activeQuestion.idealAnswerSTAR}
+                          </div>
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -513,6 +500,37 @@ export const InterviewPrep: React.FC = () => {
 
           </div>
         )}
+
+        {/* Navigation Actions Bottom */}
+        <div className="flex items-center justify-between pt-8 border-t border-zinc-200 dark:border-zinc-800 mt-8 mb-4">
+          <Link
+            to="/resume-builder"
+            className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-5 py-2.5 text-sm font-bold text-zinc-700 shadow-sm hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back (Resume Builder)
+          </Link>
+
+          <div className="flex items-center gap-3">
+            {evaluatedQuestionsCount > 0 && (
+              <button
+                onClick={calculateFinalConfirmationScore}
+                className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-indigo-700 transition-all cursor-pointer"
+              >
+                Finish Evaluation
+                <Award className="h-4.5 w-4.5" />
+                Show My Final Score
+              </button>
+            )}
+            <Link
+              to="/dashboard"
+              className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-5 py-2.5 text-sm font-bold text-zinc-700 shadow-sm hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+            >
+              Dashboard
+              <ChevronRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
 
       </div>
 

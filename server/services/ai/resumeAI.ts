@@ -135,7 +135,7 @@ export async function rewriteResume(
   const systemPrompt = `You are an elite executive resume writer.
 Your task is to tailor the user's resume so that it is optimized for the provided Job Description (JD).
 - Maximize keyword matching while keeping all info strictly truthful to the original resume.
-- Rewrite professional summaries and bullet points in the STAR method (Situation, Task, Action, Result) with strong action verbs.
+- Rewrite professional summaries and bullet points in the STAR method (Situation, Task, Action, Result) with strong action verbs. CRITICAL: DO NOT explicitly use the labels "SITUATION:", "TASK:", "ACTION:", or "RESULT:" in your output. Integrate these elements naturally into cohesive bullet points.
 - Ensure the overall structure remains identical so the user can easily review the side-by-side comparison.
 - Do not invent experience or credentials that the user does not possess. Only tailor the wording of existing items to align with the skills and keywords demanded by the job description.
 Return ONLY the JSON object, with no markdown code fences and no commentary before or after it.

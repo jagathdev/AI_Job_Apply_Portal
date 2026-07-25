@@ -33,7 +33,7 @@ Evaluate the match on multiple axes:
 3. Overall Score (weighted average + context adjustment)
 
 Identify missing key terms (the gap), highlight important skills, provide concrete optimization suggestions, and return a checklist of individual, bite-sized "actionItems" that the candidate should complete to achieve a 95%+ match.
-Crucially, you must also provide "bulletPointComparisons": analyze the experience bullet points in the resume, and provide 2-3 examples where the original phrasing is rewritten using the STAR method, heavily infused with the JD's keywords. Include the section ("experience" or "projects") and the zero-based index of where that bullet occurs.
+Crucially, you must also provide "bulletPointComparisons": analyze the experience bullet points in the resume, and provide 2-3 examples where the original phrasing is rewritten using the STAR method, heavily infused with the JD's keywords. DO NOT explicitly use the labels "SITUATION:", "TASK:", "ACTION:", or "RESULT:" in the rewritten bullets; integrate them naturally. Include the section ("experience" or "projects") and the zero-based index of where that bullet occurs.
 
 Return your response strictly as a JSON object with this structure:
 {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
@@ -13,9 +13,11 @@ export const ATSScore: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState<any | null>(null);
+  const hasFetched = useRef(false);
 
   useEffect(() => {
-    if (activeResume && activeCompany) {
+    if (activeResume && activeCompany && !hasFetched.current) {
+      hasFetched.current = true;
       runATSCheck();
     }
   }, [activeResume, activeCompany]);
@@ -96,16 +98,7 @@ export const ATSScore: React.FC = () => {
     <div className="min-h-[calc(100vh-4rem)] bg-zinc-50 px-4 py-8 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 transition-colors duration-300">
       <div className="mx-auto max-w-5xl space-y-6">
 
-        {/* Previous Step Back link */}
-        <div className="flex items-center">
-          <Link
-            to="/resume-builder"
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-500 hover:text-indigo-600 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Resume Builder
-          </Link>
-        </div>
+
         
         {/* Header summary */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-5">
@@ -254,6 +247,24 @@ export const ATSScore: React.FC = () => {
 
           </div>
         )}
+
+        {/* Navigation Actions */}
+        <div className="flex items-center justify-between pt-8 border-t border-zinc-200 dark:border-zinc-800 mt-8 mb-4">
+          <Link
+            to="/resume-builder"
+            className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-5 py-2.5 text-sm font-bold text-zinc-700 shadow-sm hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back (Resume Builder)
+          </Link>
+          <Link
+            to="/interview-preparation"
+            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-indigo-700 transition-all cursor-pointer"
+          >
+            Next (Interview Preparation)
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
 
       </div>
     </div>

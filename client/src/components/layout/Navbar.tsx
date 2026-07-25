@@ -11,6 +11,7 @@ import {
 export const Navbar: React.FC = () => {
   const { user, logoutUser, theme, toggleTheme, activeCompany } = useApp();
   const [isOpen, setIsOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -27,9 +28,7 @@ export const Navbar: React.FC = () => {
     { name: 'Dashboard', path: '/dashboard', icon: Briefcase },
     ...(activeCompany ? [{ name: 'Company Details', path: `/company/${activeCompany._id || activeCompany.id}`, icon: Building }] : []),
     { name: 'Resume Builder', path: '/resume-builder', icon: FileText },
-    { name: 'ATS Score', path: '/ats-score', icon: CheckCircle },
     { name: 'Interview Prep', path: '/interview-preparation', icon: Sparkles },
-    { name: 'Settings', path: '/settings', icon: Settings },
   ];
 
   return (
@@ -83,19 +82,55 @@ export const Navbar: React.FC = () => {
             </button>
 
             {user ? (
-              <div className="flex items-center space-x-3">
-                <span className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900 whitespace-nowrap">
-                  <User className="h-3 w-3" />
-                  {user.subscriptionStatus === 'premium' ? 'Premium' : 'Free Tier'}
-                </span>
-                
+              <div className="relative">
                 <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium border border-red-200 dark:border-red-950/50 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all duration-200 whitespace-nowrap"
+                  onClick={() => setIsProfileOpen(!isProfileOpen)}
+                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 text-white font-bold shadow-md hover:shadow-lg transition-all cursor-pointer border border-indigo-400 dark:border-indigo-800"
                 >
-                  <LogOut className="h-4 w-4" />
-                  Logout
+                  {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
                 </button>
+
+                <AnimatePresence>
+                  {isProfileOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      className="absolute right-0 mt-3 w-56 rounded-2xl border border-zinc-200 bg-white p-2 shadow-2xl dark:border-zinc-800 dark:bg-zinc-950"
+                    >
+                      <div className="px-3 py-2 border-b border-zinc-100 dark:border-zinc-900 mb-2">
+                        <p className="text-sm font-bold truncate">{user.name}</p>
+                        <p className="text-xs text-zinc-500 truncate">{user.email}</p>
+                      </div>
+
+                      <div className="space-y-1 mb-2">
+                        <div className="flex items-center justify-between px-3 py-1.5">
+                          <span className="text-xs font-semibold text-zinc-500">Plan</span>
+                          <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900">
+                            {user.subscriptionStatus === 'premium' ? 'Premium' : 'Free Tier'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <Link
+                        to="/settings"
+                        onClick={() => setIsProfileOpen(false)}
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-50 transition-colors"
+                      >
+                        <Settings className="h-4 w-4" />
+                        Settings
+                      </Link>
+
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-2 px-3 py-2 mt-1 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/20 transition-colors cursor-pointer"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        Logout
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             ) : (
               <div className="flex items-center space-x-2">
@@ -176,9 +211,18 @@ export const Navbar: React.FC = () => {
                     );
                   })}
 
+                  <Link
+                    to="/settings"
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-base font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-all"
+                  >
+                    <Settings className="h-5 w-5" />
+                    Settings
+                  </Link>
+
                   <button
                     onClick={handleLogout}
-                    className="flex w-full items-center gap-2 px-3 py-2.5 mt-4 rounded-xl text-base font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all"
+                    className="w-full flex items-center gap-2 px-3 py-2.5 mt-2 rounded-xl text-base font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all text-left"
                   >
                     <LogOut className="h-5 w-5" />
                     Logout
