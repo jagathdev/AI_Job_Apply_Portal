@@ -27,11 +27,12 @@ const CompanySchema = new Schema({
   companyOverview: { type: String, default: '' },
   currentProjects: { type: [String], default: [] },
   products: { type: [String], default: [] },
-  techStack: { type: [String], default: [] },
+  techStack: { type: [Schema.Types.Mixed], default: [] },
   requiredSkills: { type: [String], default: [] },
   preferredSkills: { type: [String], default: [] },
   interviewExpectations: { type: String, default: '' },
-  hiringProcess: { type: [String], default: [] },
+  hiringProcess: { type: [Schema.Types.Mixed], default: [] },
+  interviewChecklist: { type: [String], default: [] },
   employeeStrength: { type: String, default: 'N/A' },
   companyRatings: { type: String, default: 'N/A' },
   workCulture: { type: String, default: '' },
@@ -190,7 +191,7 @@ const AppliedJobSchema = new Schema({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   companyName: { type: String, required: true },
   jobTitle: { type: String, required: true },
-  status: { type: String, enum: ['applied', 'interviewing', 'offered', 'rejected'], default: 'applied' },
+  status: { type: String, enum: ['applied', 'interviewing', 'offered', 'rejected', 'interview', 'completed'], default: 'applied' },
   appliedDate: { type: Date, default: Date.now },
   notes: { type: String, default: '' }
 });

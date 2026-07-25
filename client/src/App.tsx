@@ -5,6 +5,7 @@ import { Navbar } from './components/layout/Navbar';
 import { Footer } from './components/layout/Footer';
 import { ChatbotWidget } from './components/chatbot/ChatbotWidget';
 import { ToastContainer } from './components/common/ToastContainer';
+import { AiLimitModal } from './components/common/AiLimitModal';
 
 // Import Pages
 import { Home } from './pages/Home/Home';
@@ -36,6 +37,9 @@ const AppContent: React.FC = () => {
       {/* Global Toast Alerts */}
       <ToastContainer />
 
+      {/* Global AI Rate Limit Modal */}
+      <AiLimitModal />
+
       {/* Primary Navigation bar */}
       <Navbar />
 
@@ -44,7 +48,7 @@ const AppContent: React.FC = () => {
         <Routes>
           {/* Public views */}
           <Route path="/" element={<Navigate to="/home" replace />} />
-          <Route path="/home" element={<Home />} />
+          <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
           <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
           <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
 

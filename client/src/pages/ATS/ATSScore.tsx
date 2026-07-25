@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import axios from 'axios';
 import {
   Sparkles, FileText, CheckCircle2, AlertTriangle, ArrowRight,
-  TrendingUp, RefreshCw, Layers, ListTodo, ThumbsUp, ThumbsDown
+  TrendingUp, RefreshCw, Layers, ListTodo, ThumbsUp, ThumbsDown, ArrowLeft
 } from 'lucide-react';
 
 export const ATSScore: React.FC = () => {
@@ -93,7 +94,18 @@ export const ATSScore: React.FC = () => {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-zinc-50 px-4 py-8 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 transition-colors duration-300">
-      <div className="mx-auto max-w-5xl space-y-8">
+      <div className="mx-auto max-w-5xl space-y-6">
+
+        {/* Previous Step Back link */}
+        <div className="flex items-center">
+          <Link
+            to="/resume-builder"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-500 hover:text-indigo-600 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Resume Builder
+          </Link>
+        </div>
         
         {/* Header summary */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-5">

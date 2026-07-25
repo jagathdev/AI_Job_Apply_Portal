@@ -10,11 +10,12 @@ export interface CompanyAnalysisResult {
   companyOverview: string;
   currentProjects: string[];
   products: string[];
-  techStack: string[];
+  techStack: { name: string; explanation: string }[];
   requiredSkills: string[];
   preferredSkills: string[];
   interviewExpectations: string;
-  hiringProcess: string[];
+  hiringProcess: { step: string; duration: string; format: string; tip: string }[];
+  interviewChecklist: string[];
   employeeStrength: string;
   companyRatings: string;
   workCulture: string;
@@ -49,11 +50,24 @@ Structure to return:
   "companyOverview": "A professional paragraph summarizing what the company does, its mission and standing",
   "currentProjects": ["Project 1", "Project 2"],
   "products": ["Product A", "Product B"],
-  "techStack": ["React", "TypeScript", "Node.js", "Express", "MongoDB"],
+  "techStack": [
+    { "name": "React", "explanation": "Core frontend framework used for building dynamic, high-performance UI components." }
+  ],
   "requiredSkills": ["Skill A", "Skill B"],
   "preferredSkills": ["Skill X", "Skill Y"],
   "interviewExpectations": "A summary of what interviewers look for (e.g., solid system design skills, cultural alignment)",
-  "hiringProcess": ["Step 1: Recruiter Call", "Step 2: Technical Interview", "Step 3: System Design", "Step 4: Culture Fit & Offer"],
+  "hiringProcess": [
+    {
+      "step": "Step 1: Recruiter Call",
+      "duration": "30 mins",
+      "format": "Phone Screen",
+      "tip": "Introduce your career milestones and align your salary expectations with this role."
+    }
+  ],
+  "interviewChecklist": [
+    "Review JavaScript event loop & asynchronous engine specs.",
+    "Prepare scenarios showing ownership of production build deployments."
+  ],
   "employeeStrength": "Estimated company size (e.g., 500-1000 employees)",
   "companyRatings": "Estimated Glassdoor rating (e.g., 4.2/5)",
   "workCulture": "A paragraph describing the work culture (e.g., collaborative, fast-paced, high autonomy)",

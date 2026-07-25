@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { motion } from 'motion/react';
 import axios from 'axios';
 import {
-  Sparkles, ShieldAlert, Download, Trash2, Sun, Moon, Lock, Info, KeyRound
+  Sparkles, ShieldAlert, Download, Trash2, Sun, Moon, Lock, Info, KeyRound, ArrowLeft
 } from 'lucide-react';
 
 export const Settings: React.FC = () => {
@@ -118,7 +118,18 @@ export const Settings: React.FC = () => {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-zinc-50 px-4 py-8 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 transition-colors duration-300">
-      <div className="mx-auto max-w-3xl space-y-8">
+      <div className="mx-auto max-w-3xl space-y-6">
+
+        {/* Previous Step Back link */}
+        <div className="flex items-center">
+          <Link
+            to="/dashboard"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-500 hover:text-indigo-600 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Link>
+        </div>
         
         {/* Header summary */}
         <div className="border-b border-zinc-200 dark:border-zinc-800 pb-5">

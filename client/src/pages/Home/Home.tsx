@@ -1,25 +1,36 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState, useRef } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { motion, AnimatePresence } from 'motion/react';
 import axios from 'axios';
-import { 
-  Sparkles, FileText, Link as LinkIcon, ArrowRight, 
-  MapPin, DollarSign, Brain, Layers, ShieldCheck, Check
+import {
+  Sparkles, FileText, Briefcase, Trophy, ChevronRight,
+  TrendingUp, Calendar, AlertCircle, Play, CheckCircle2,
+  Bookmark, ClipboardList, HelpCircle, MapPin, DollarSign,
+  Layers, ArrowRight, Brain, ArrowDown, ShieldCheck, KeyRound,
+  FileCheck2, Settings as SettingsIcon, AlertTriangle
 } from 'lucide-react';
 
 export const Home: React.FC = () => {
-  const { showToast, setActiveCompany } = useApp();
-  const navigate = useNavigate();
+  const { 
+    user, 
+    refreshDashboardStats, 
+    dashboardStats, 
+    activeResume, 
+    setActiveResume,
+    activeCompany, 
+    setActiveCompany, 
+    showToast 
+  } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'text' | 'url'>('text');
+  const [loading, setLoading] = useState(true);
   const [jdText, setJdText] = useState('');
   const [jdUrl, setJdUrl] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [loadingStage, setLoadingStage] = useState(0);
 
-  // Compact result state
-  const [analyzedResult, setAnalyzedResult] = useState<any | null>(null);
+  const guideRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   const loadingStages = [
     'Parsing document structures...',
@@ -28,6 +39,27 @@ export const Home: React.FC = () => {
     'Grounded culture review & intelligence assembly...',
     'Drafting tailored preparation packages...'
   ];
+
+  useEffect(() => {
+    loadStatsAndContext();
+  }, []);
+
+  const loadStatsAndContext = async () => {
+    setLoading(true);
+    await refreshDashboardStats();
+    
+    // Attempt to pull latest resume from DB if context cache is empty
+    try {
+      const res = await axios.get('/api/resume/all');
+      if (res.data.length > 0 && !activeResume) {
+        setActiveResume(res.data[0]);
+      }
+    } catch (err) {
+      console.error('Failed to pre-fetch resumes:', err);
+    }
+    
+    setLoading(false);
+  };
 
   const triggerLoaderCycle = (stopRef: { current: boolean }) => {
     setLoadingStage(0);
@@ -45,22 +77,25 @@ export const Home: React.FC = () => {
     e.preventDefault();
     
     const body: any = {};
-    if (activeTab === 'text') {
-      if (!jdText.trim() || jdText.trim().length < 100) {
+    const textVal = jdText.trim();
+    const urlVal = jdUrl.trim();
+
+    if (!urlVal) {
+      showToast('Please enter a valid job URL.', 'error');
+      return;
+    }
+
+    body.jdUrl = urlVal;
+
+    if (textVal) {
+      if (textVal.length < 100) {
         showToast('Please enter a job description of at least 100 characters.', 'error');
         return;
       }
-      body.jdText = jdText.trim();
-    } else {
-      if (!jdUrl.trim()) {
-        showToast('Please enter a valid job URL.', 'error');
-        return;
-      }
-      body.jdUrl = jdUrl.trim();
+      body.jdText = textVal;
     }
 
-    setIsLoading(true);
-    setAnalyzedResult(null);
+    setIsAnalyzing(true);
     const stopRef = { current: false };
     const loaderInterval = triggerLoaderCycle(stopRef);
 
@@ -69,238 +104,428 @@ export const Home: React.FC = () => {
       stopRef.current = true;
       clearInterval(loaderInterval);
       
-      setAnalyzedResult(res.data.company);
       setActiveCompany(res.data.company);
-      showToast('AI Company Analysis completed successfully!', 'success');
+      showToast('AI Job Analysis completed successfully!', 'success');
+      await refreshDashboardStats();
+      navigate(`/company/${res.data.company._id || res.data.company.id}`);
     } catch (err: any) {
       stopRef.current = true;
       clearInterval(loaderInterval);
       
       if (err.response?.data?.code === 'SCRAPE_BLOCKED') {
-        showToast('Scraper blocked. Please paste the job text instead.', 'info');
-        setActiveTab('text');
+        showToast('Scraper blocked. Please paste the Job Description text directly.', 'info');
       } else {
         showToast(err.response?.data?.error || 'AI analysis timed out or failed.', 'error');
       }
     } finally {
-      setIsLoading(false);
+      setIsAnalyzing(false);
     }
   };
 
+  const scrollToGuide = () => {
+    guideRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-zinc-50 dark:bg-zinc-950">
+        <div className="text-center space-y-4">
+          <div className="h-10 w-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">Assembling your workspace...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const completionPercentage = user?.profileCompletion || 30;
+  const isResumeUploaded = !!activeResume;
+  const isJobAnalyzed = !!activeCompany;
+  const isTailored = activeResume?.name?.toLowerCase().includes('tailored') || false;
+
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] flex-col bg-zinc-50 dark:bg-zinc-950 transition-colors duration-300">
-      <div className="flex-1 mx-auto max-w-4xl px-4 py-12 md:py-20 w-full flex flex-col justify-center">
+    <div className="min-h-[calc(100vh-4rem)] bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 transition-colors duration-300">
+      
+      {/* HERO BANNER */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-indigo-950 via-slate-900 to-zinc-950 py-16 md:py-24 text-white">
         
-        {/* Hero Headline */}
-        <div className="text-center space-y-4 mb-12">
+        {/* Subtle grid pattern background */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
+        
+        {/* Colorful blur spots */}
+        <div className="absolute -top-40 -left-40 h-96 w-96 rounded-full bg-indigo-500/10 blur-[120px] pointer-events-none" />
+        <div className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full bg-purple-500/15 blur-[120px] pointer-events-none" />
+
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center space-y-6 relative z-10">
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/50 text-xs font-bold uppercase tracking-wider"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 text-xs font-bold uppercase tracking-wider mx-auto"
           >
-            <Sparkles className="h-3.5 w-3.5" />
-            AI RECRUITMENT SUITE
+            <Sparkles className="h-4 w-4 text-indigo-400" />
+            AI Application Pipeline Active
           </motion.div>
+
           <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-tight">
-            Search Smarter. Apply Faster.<br />
-            <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 bg-clip-text text-transparent">Get Hired with AI.</span>
+            Accelerate Your Job Application Journey
           </h1>
-          <p className="text-sm md:text-base text-zinc-500 dark:text-zinc-400 max-w-xl mx-auto leading-relaxed">
-            Paste a job description or URL. Our AI extracts hidden intelligence, grades your resume, rewrites optimized bullet-points, and builds custom interview preps.
+          <p className="text-sm md:text-base text-zinc-300 max-w-2xl mx-auto leading-relaxed">
+            Our AI-guided suite helps you analyze company cultures, tailor resume experience bullets utilizing Grok AI, and prepare custom mock interviews. Follow the checklist below to land your role.
+          </p>
+
+          <div className="pt-4 flex justify-center">
+            <button
+              onClick={scrollToGuide}
+              className="flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3.5 text-xs font-bold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-700 transition-all cursor-pointer group"
+            >
+              Start AI Apply Journey
+              <ArrowDown className="h-4 w-4 group-hover:translate-y-1 transition-transform" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Container */}
+      <div ref={guideRef} className="mx-auto max-w-6xl px-4 py-12 md:py-16 space-y-12">
+        
+        {/* Section Header */}
+        <div className="text-center space-y-2">
+          <h2 className="text-2xl font-black tracking-tight">AI Job Apply Pipeline Guide</h2>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-md mx-auto">
+            Complete these 7 logical steps to verify your suitability and master your interview parameters.
           </p>
         </div>
 
-        {/* Input Panel */}
-        <AnimatePresence mode="wait">
-          {!isLoading && !analyzedResult && (
-            <motion.div
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-800 dark:bg-zinc-900"
-            >
-              {/* Tab Selector */}
-              <div className="flex border-b border-zinc-200 dark:border-zinc-800 pb-3 mb-6 gap-4">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('text')}
-                  className={`flex items-center gap-1.5 pb-2.5 text-xs font-bold tracking-tight border-b-2 transition-all cursor-pointer ${
-                    activeTab === 'text'
-                      ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
-                      : 'border-transparent text-zinc-400 hover:text-zinc-600'
-                  }`}
-                >
-                  <FileText className="h-4 w-4" />
-                  Paste Job Description
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('url')}
-                  className={`flex items-center gap-1.5 pb-2.5 text-xs font-bold tracking-tight border-b-2 transition-all cursor-pointer ${
-                    activeTab === 'url'
-                      ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
-                      : 'border-transparent text-zinc-400 hover:text-zinc-600'
-                  }`}
-                >
-                  <LinkIcon className="h-4 w-4" />
-                  Job Board Link (Best Effort)
-                </button>
+        {/* PIPELINE INTERACTIVE MAP */}
+        <div className="space-y-6 max-w-4xl mx-auto">
+          
+          {/* STEP 1: AUTHENTICATION */}
+          <div className="flex gap-4 p-5 rounded-2xl border border-emerald-200/50 bg-emerald-500/5 dark:border-emerald-950/40 dark:bg-emerald-950/5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 h-24 w-24 bg-emerald-500/5 rounded-full translate-x-8 -translate-y-8" />
+            
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 border border-emerald-200/40 shrink-0">
+              <CheckCircle2 className="h-5 w-5" />
+            </div>
+
+            <div className="space-y-1 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Step 1 (Completed)</span>
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
               </div>
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Create Account & Authenticate</h3>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                You are registered and logged in as <b className="text-zinc-800 dark:text-zinc-200">{user?.name}</b> ({user?.email}).
+              </p>
+            </div>
+          </div>
 
-              <form onSubmit={handleAnalyze} className="space-y-4">
-                {activeTab === 'text' ? (
-                  <div>
-                    <textarea
-                      required
-                      value={jdText}
-                      onChange={(e) => setJdText(e.target.value)}
-                      placeholder="Paste the target job description text here (including required experience, tools, culture etc.). Min 100 characters."
-                      rows={8}
-                      className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 p-4 text-xs outline-none focus:border-indigo-500 focus:bg-white dark:border-zinc-800 dark:bg-zinc-950 dark:focus:bg-zinc-950 transition-all font-sans leading-relaxed"
-                    />
-                  </div>
-                ) : (
-                  <div>
-                    <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1.5">
-                      Target Job Board URL
-                    </label>
-                    <div className="relative flex items-center">
-                      <LinkIcon className="absolute left-3.5 h-4 w-4 text-zinc-400 pointer-events-none" />
-                      <input
-                        type="url"
-                        required
-                        value={jdUrl}
-                        onChange={(e) => setJdUrl(e.target.value)}
-                        placeholder="https://www.linkedin.com/jobs/view/..."
-                        className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 py-3 pl-10 pr-4 text-xs outline-none focus:border-indigo-500 focus:bg-white dark:border-zinc-800 dark:bg-zinc-950 dark:focus:bg-zinc-950 transition-all"
-                      />
-                    </div>
-                    <span className="block text-[10px] text-zinc-400 dark:text-zinc-500 mt-2">
-                      💡 Note: Private networks & portals often block crawlers. Paste description text if url scraping fails.
-                    </span>
-                  </div>
-                )}
+          {/* STEP 2: JD ANALYSIS */}
+          <div className={`flex gap-4 p-5 rounded-2xl border transition-all ${
+            isJobAnalyzed 
+              ? 'border-emerald-200 bg-emerald-500/5 dark:border-emerald-950/40 dark:bg-emerald-950/5' 
+              : 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 shadow-sm'
+          }`}>
+            <div className={`flex h-10 w-10 items-center justify-center rounded-xl shrink-0 ${
+              isJobAnalyzed 
+                ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400' 
+                : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-650 dark:text-indigo-400'
+            }`}>
+              {isJobAnalyzed ? <CheckCircle2 className="h-5 w-5" /> : <Briefcase className="h-5 w-5" />}
+            </div>
 
-                <button
-                  type="submit"
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3.5 text-xs font-bold text-white shadow-lg shadow-indigo-500/10 hover:bg-indigo-700 hover:shadow-indigo-500/20 transition-all cursor-pointer"
-                >
-                  <Brain className="h-4 w-4" />
-                  Analyze Role with Grok AI
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-              </form>
-            </motion.div>
-          )}
-
-          {/* Premium Loading Skeleton */}
-          {isLoading && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="rounded-2xl border border-zinc-200 bg-white p-8 dark:border-zinc-800 dark:bg-zinc-900 shadow-xl space-y-6"
-            >
-              <div className="flex flex-col items-center justify-center text-center py-6">
-                <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400">
-                  <Sparkles className="h-8 w-8 animate-spin" />
-                  <span className="absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-20 animate-ping" />
+            <div className="space-y-4 flex-1">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className={`text-[10px] font-bold uppercase tracking-wider ${
+                    isJobAnalyzed ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-650 dark:text-indigo-400'
+                  }`}>
+                    Step 2: {isJobAnalyzed ? 'Job Analyzed (Completed)' : 'Paste Job Link or Description'}
+                  </span>
+                  {isJobAnalyzed && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
                 </div>
-                <h3 className="mt-4 text-sm font-bold tracking-tight">Extracting Corporate Intelligence...</h3>
-                <p className="mt-1.5 text-xs text-indigo-600 dark:text-indigo-400 font-semibold animate-pulse">
-                  {loadingStages[loadingStage]}
+                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">AI-Powered Job Analysis</h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Submit a job post link or paste description text below. The AI will extract its tech stack, interview stages, key culture points, and competitor lists.
                 </p>
               </div>
 
-              {/* Skeletons blocks to look highly technical */}
-              <div className="space-y-3.5 pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                <div className="h-4 bg-zinc-100 dark:bg-zinc-800 rounded-lg w-3/4 animate-pulse" />
-                <div className="h-4 bg-zinc-100 dark:bg-zinc-800 rounded-lg w-1/2 animate-pulse delay-75" />
-                <div className="h-3.5 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg w-5/6 animate-pulse delay-150" />
-                <div className="h-3.5 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg w-2/3 animate-pulse delay-300" />
-              </div>
-            </motion.div>
-          )}
-
-          {/* Compact Results Summary Card */}
-          {analyzedResult && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="rounded-2xl border border-emerald-200 bg-white p-6 shadow-xl dark:border-emerald-950/40 dark:bg-zinc-900 space-y-6"
-            >
-              <div className="flex items-start justify-between gap-3 pb-4 border-b border-zinc-100 dark:border-zinc-800">
-                <div className="flex gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400 shrink-0">
-                    <ShieldCheck className="h-6 w-6" />
+              {!isAnalyzing && isJobAnalyzed && (
+                <div className="flex flex-wrap gap-2.5 items-center bg-zinc-55 bg-zinc-100/50 dark:bg-zinc-800/40 p-3.5 rounded-xl border border-zinc-200/50 dark:border-zinc-800/40 text-xs">
+                  <Briefcase className="h-4 w-4 text-indigo-500 shrink-0" />
+                  <div className="flex-1">
+                    <span className="font-bold text-zinc-800 dark:text-zinc-200">{activeCompany.companyName}</span>
+                    <span className="mx-2 text-zinc-350 dark:text-zinc-600">•</span>
+                    <span className="text-zinc-500 dark:text-zinc-400">{activeCompany.jobTitle}</span>
                   </div>
-                  <div>
-                    <h3 className="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-50">{analyzedResult.jobTitle}</h3>
-                    <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">{analyzedResult.companyName}</p>
+                  <Link 
+                    to={`/company/${activeCompany._id || activeCompany.id}`}
+                    className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 shrink-0"
+                  >
+                    View Details
+                    <ArrowRight className="h-3 w-3" />
+                  </Link>
+                </div>
+              )}
+
+              <form onSubmit={handleAnalyze} className="space-y-3.5">
+                <div className="grid grid-cols-1 gap-3.5">
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider block">Job Link / URL</label>
+                    <input
+                      type="url"
+                      placeholder="e.g. https://jobs.lever.co/example-company/software-engineer"
+                      value={jdUrl}
+                      onChange={(e) => setJdUrl(e.target.value)}
+                      disabled={isAnalyzing}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 text-xs shadow-sm focus:border-indigo-500 focus:outline-none transition-all disabled:opacity-50"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider block">Job Description Text (Optional fallback if link fails)</label>
+                    <textarea
+                      placeholder="Paste the full job description text here..."
+                      value={jdText}
+                      onChange={(e) => setJdText(e.target.value)}
+                      disabled={isAnalyzing}
+                      rows={4}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 text-xs shadow-sm focus:border-indigo-500 focus:outline-none transition-all disabled:opacity-50 resize-y"
+                    />
                   </div>
                 </div>
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
-                  <Check className="h-3 w-3" />
-                  ANALYZED
+
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="submit"
+                    disabled={isAnalyzing}
+                    className="flex items-center justify-center gap-2 rounded-xl bg-indigo-650 hover:bg-indigo-750 text-white px-5 py-2.5 text-xs font-bold transition-all shadow-md shadow-indigo-500/10 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed w-full sm:w-auto"
+                  >
+                    {isAnalyzing ? (
+                      <>
+                        <div className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <Brain className="h-4 w-4" />
+                        Analyze Job Details
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+
+              {/* Progress feedback when analyzing */}
+              <AnimatePresence>
+                {isAnalyzing && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="p-4 rounded-xl border border-indigo-100 bg-indigo-50/50 dark:border-indigo-950/40 dark:bg-indigo-950/10 mt-2 space-y-2">
+                      <div className="flex justify-between items-center text-xs font-semibold">
+                        <span className="text-indigo-650 dark:text-indigo-400 flex items-center gap-1.5">
+                          <div className="h-2 w-2 rounded-full bg-indigo-500 animate-ping" />
+                          AI Analyst at work...
+                        </span>
+                        <span className="text-zinc-400 dark:text-zinc-500 font-mono">Stage {loadingStage + 1}/5</span>
+                      </div>
+                      <p className="text-xs text-zinc-650 dark:text-zinc-350 italic font-medium animate-pulse">
+                        "{loadingStages[loadingStage]}"
+                      </p>
+                      <div className="w-full bg-indigo-100 dark:bg-indigo-950/60 h-1.5 rounded-full overflow-hidden">
+                        <motion.div 
+                          className="bg-indigo-600 h-full rounded-full"
+                          animate={{ width: `${((loadingStage + 1) / 5) * 100}%` }}
+                          transition={{ duration: 0.5 }}
+                        />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+
+          {/* STEP 3: COMPANY CULTURE SCREEN */}
+          <div className={`flex gap-4 p-5 rounded-2xl border transition-all ${
+            isJobAnalyzed 
+              ? 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 shadow-sm' 
+              : 'opacity-55 bg-zinc-50 dark:bg-zinc-900/10 border-zinc-200 dark:border-zinc-850'
+          }`}>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-650 dark:text-indigo-400 border border-indigo-200/40 shrink-0">
+              <Layers className="h-5 w-5" />
+            </div>
+            <div className="space-y-2 flex-1">
+              <span className="text-[10px] font-bold text-indigo-650 dark:text-indigo-400 uppercase tracking-wider block">Step 3: Company Intelligence screen</span>
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Review Company & Tech Details</h3>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                Explore the structured summary panels for company standings, core engineering verticals, work hours layout, and competitors.
+              </p>
+              {isJobAnalyzed && (
+                <div className="pt-2">
+                  <Link
+                    to={`/company/${activeCompany._id || activeCompany.id}`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-950 text-indigo-650 dark:text-indigo-400 text-xs font-bold transition-all"
+                  >
+                    View Details & Verticals
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* STEP 4: RESUME BUILDER */}
+          <div className={`flex gap-4 p-5 rounded-2xl border transition-all ${
+            isResumeUploaded 
+              ? 'border-emerald-200 bg-emerald-500/5 dark:border-emerald-950/40 dark:bg-emerald-950/5' 
+              : 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 shadow-sm'
+          }`}>
+            <div className={`flex h-10 w-10 items-center justify-center rounded-xl shrink-0 ${
+              isResumeUploaded 
+                ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400' 
+                : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-650 dark:text-indigo-400'
+            }`}>
+              {isResumeUploaded ? <CheckCircle2 className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
+            </div>
+
+            <div className="space-y-2 flex-1">
+              <div className="flex items-center gap-2">
+                <span className={`text-[10px] font-bold uppercase tracking-wider ${
+                  isResumeUploaded ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-650 dark:text-indigo-400'
+                }`}>
+                  Step 4: {isResumeUploaded ? 'Resume Uploaded (Completed)' : 'Upload or Paste Resume'}
                 </span>
+                {isResumeUploaded && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
               </div>
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Upload Your Resume Profile</h3>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                Provide your latest professional resume. The platform will parsing key details and index them for tailored customizations.
+              </p>
+              
+              {isResumeUploaded && (
+                <div className="flex items-center gap-2 bg-zinc-100/50 dark:bg-zinc-800/40 p-2.5 rounded-xl border border-zinc-200/50 dark:border-zinc-800/40 text-xs">
+                  <FileText className="h-4 w-4 text-emerald-500 shrink-0" />
+                  <span className="font-bold text-zinc-800 dark:text-zinc-200 flex-1 truncate">{activeResume.name}</span>
+                </div>
+              )}
 
-              {/* Bento Grid layout inside compact card */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="rounded-xl bg-zinc-50 p-4 dark:bg-zinc-950/40 space-y-1">
-                  <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-zinc-400">
-                    <MapPin className="h-3 w-3" />
-                    Location
-                  </span>
-                  <span className="block text-xs font-semibold">{analyzedResult.location}</span>
-                </div>
-                
-                <div className="rounded-xl bg-zinc-50 p-4 dark:bg-zinc-950/40 space-y-1">
-                  <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-zinc-400">
-                    <DollarSign className="h-3 w-3" />
-                    Salary (Est.)
-                  </span>
-                  <span className="block text-xs font-semibold">{analyzedResult.salaryRange}</span>
-                </div>
-
-                <div className="rounded-xl bg-zinc-50 p-4 dark:bg-zinc-950/40 space-y-1">
-                  <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-zinc-400">
-                    <Layers className="h-3 w-3" />
-                    Employment Type
-                  </span>
-                  <span className="block text-xs font-semibold">{analyzedResult.employmentType}</span>
-                </div>
+              <div className="pt-2">
+                <Link
+                  to="/resume-builder"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-650 hover:bg-indigo-750 text-white text-xs font-bold transition-all shadow-sm"
+                >
+                  Manage Resume Workspace
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
               </div>
+            </div>
+          </div>
 
-              {/* Skills summary block */}
-              <div className="space-y-2">
-                <h4 className="text-xs font-bold text-zinc-500">Core Required Stack</h4>
-                <div className="flex flex-wrap gap-1.5">
-                  {analyzedResult.techStack.slice(0, 6).map((tech: string, i: number) => (
-                    <span key={i} className="text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-                      {tech}
-                    </span>
-                  ))}
-                  {analyzedResult.techStack.length > 6 && (
-                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400">
-                      +{analyzedResult.techStack.length - 6} more
-                    </span>
-                  )}
-                </div>
+          {/* STEP 5: RESUME TAILORING */}
+          <div className={`flex gap-4 p-5 rounded-2xl border transition-all ${
+            isResumeUploaded && isJobAnalyzed && isTailored
+              ? 'border-emerald-200 bg-emerald-500/5 dark:border-emerald-950/40 dark:bg-emerald-950/5' 
+              : isResumeUploaded && isJobAnalyzed
+                ? 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 shadow-sm'
+                : 'opacity-55 bg-zinc-50 dark:bg-zinc-900/10 border-zinc-200 dark:border-zinc-850'
+          }`}>
+            <div className={`flex h-10 w-10 items-center justify-center rounded-xl shrink-0 ${
+              isResumeUploaded && isJobAnalyzed && isTailored
+                ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400' 
+                : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-650 dark:text-indigo-400'
+            }`}>
+              {isResumeUploaded && isJobAnalyzed && isTailored ? <CheckCircle2 className="h-5 w-5" /> : <Sparkles className="h-5 w-5" />}
+            </div>
+
+            <div className="space-y-2 flex-1">
+              <div className="flex items-center gap-2">
+                <span className={`text-[10px] font-bold uppercase tracking-wider ${
+                  isResumeUploaded && isJobAnalyzed && isTailored ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-650 dark:text-indigo-400'
+                }`}>
+                  Step 5: {isResumeUploaded && isJobAnalyzed && isTailored ? 'Resume Tailored (Completed)' : 'Tailor Resume Bullets'}
+                </span>
+                {isResumeUploaded && isJobAnalyzed && isTailored && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
               </div>
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">AI Resume Tailoring</h3>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                Rephrase your resume bullets to align with the core requirements and tech stack of the analyzed job, maximizing ATS fit.
+              </p>
+              {isResumeUploaded && isJobAnalyzed && (
+                <div className="pt-2">
+                  <Link
+                    to="/resume-builder"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-950 text-indigo-650 dark:text-indigo-400 text-xs font-bold transition-all"
+                  >
+                    Tailor Experience Now
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
 
-              {/* Trigger details CTA */}
-              <button
-                onClick={() => navigate(`/company/${analyzedResult._id}`)}
-                className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-indigo-600 py-3 text-xs font-bold text-white shadow-md hover:bg-indigo-700 transition-all cursor-pointer"
-              >
-                Explore 25+ Corporate Insights
-                <ArrowRight className="h-4 w-4" />
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+          {/* STEP 6: ATS FIT CARD */}
+          <div className={`flex gap-4 p-5 rounded-2xl border transition-all ${
+            isResumeUploaded && isJobAnalyzed 
+              ? 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 shadow-sm' 
+              : 'opacity-55 bg-zinc-50 dark:bg-zinc-900/10 border-zinc-200 dark:border-zinc-850'
+          }`}>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-650 dark:text-indigo-400 border border-indigo-200/40 shrink-0">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+            <div className="space-y-2 flex-1">
+              <span className="text-[10px] font-bold text-indigo-650 dark:text-indigo-400 uppercase tracking-wider block">Step 6: ATS Compatibility Check</span>
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Verify ATS Compatibility</h3>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                Run a simulated ATS check to score your resume relevance against the job description and find specific keywords to add.
+              </p>
+              {isResumeUploaded && isJobAnalyzed && (
+                <div className="pt-2">
+                  <Link
+                    to="/ats-score"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-950 text-indigo-650 dark:text-indigo-400 text-xs font-bold transition-all"
+                  >
+                    Run ATS Scoring Report
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
 
+          {/* STEP 7: INTERVIEW PREPARATION */}
+          <div className={`flex gap-4 p-5 rounded-2xl border transition-all ${
+            isJobAnalyzed 
+              ? 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 shadow-sm' 
+              : 'opacity-55 bg-zinc-50 dark:bg-zinc-900/10 border-zinc-200 dark:border-zinc-850'
+          }`}>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-650 dark:text-indigo-400 border border-indigo-200/40 shrink-0">
+              <Trophy className="h-5 w-5" />
+            </div>
+            <div className="space-y-2 flex-1">
+              <span className="text-[10px] font-bold text-indigo-650 dark:text-indigo-400 uppercase tracking-wider block">Step 7: Interview Prep Guide</span>
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Complete Mock Interview Prep</h3>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                Review the hiring timeline, and practice coding, system design, and culture-fit behavioral questions tailored to this position.
+              </p>
+              {isJobAnalyzed && (
+                <div className="pt-2">
+                  <Link
+                    to="/interview-preparation"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-950 text-indigo-650 dark:text-indigo-400 text-xs font-bold transition-all"
+                  >
+                    Open Interview Prep
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+
+        </div>
       </div>
     </div>
   );

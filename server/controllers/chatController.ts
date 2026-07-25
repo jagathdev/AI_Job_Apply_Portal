@@ -19,7 +19,29 @@ export const sendChatMessage = async (req: AuthRequest, res: Response) => {
   if (activeResumeId) {
     const resume = await Resume.findOne({ _id: activeResumeId, userId });
     if (resume) {
-      resumeText = `Skills: ${resume.skills.join(', ')}\nExperience: ${resume.experience.map(e => `${e.role} at ${e.company}`).join(', ')}`;
+      resumeText = `Name: ${resume.personalInfo?.fullName || 'Jagath'}
+Email: ${resume.personalInfo?.email || 'N/A'}
+Phone: ${resume.personalInfo?.phone || 'N/A'}
+Location: ${resume.personalInfo?.location || 'N/A'}
+Website/Portfolio: ${resume.personalInfo?.website || 'N/A'}
+LinkedIn: ${resume.personalInfo?.linkedIn || 'N/A'}
+
+Summary: ${resume.summary || 'N/A'}
+
+Skills: ${resume.skills?.join(', ') || 'N/A'}
+
+Experience:
+${resume.experience?.map((e: any) => `- Role: ${e.role} at Company: ${e.company} (${e.duration || 'N/A'})
+  Description: ${e.description || 'N/A'}`).join('\n')}
+
+Projects:
+${resume.projects?.map((p: any) => `- Title: ${p.title} (${p.techStack?.join(', ') || 'N/A'})
+  Link: ${p.link || 'N/A'}
+  Description: ${p.description || 'N/A'}`).join('\n')}
+
+Achievements: ${resume.achievements?.join(', ') || 'N/A'}
+Certifications: ${resume.certifications?.join(', ') || 'N/A'}
+Languages: ${resume.languages?.join(', ') || 'N/A'}`;
       atsScore = resume.atsScore;
     }
   }
@@ -27,7 +49,15 @@ export const sendChatMessage = async (req: AuthRequest, res: Response) => {
   if (activeCompanyId) {
     const company = await Company.findOne({ _id: activeCompanyId, userId });
     if (company) {
-      companyJD = `Company: ${company.companyName}\nRole: ${company.jobTitle}\nSkills: ${company.requiredSkills.join(', ')}\nCulture: ${company.workCulture}`;
+      companyJD = `Company: ${company.companyName}
+Role: ${company.jobTitle}
+Location: ${company.location || 'N/A'}
+Salary Range: ${company.salaryRange || 'N/A'}
+Overview: ${company.companyOverview || 'N/A'}
+Required Skills: ${company.requiredSkills?.join(', ') || 'N/A'}
+Tech Stack: ${company.techStack?.join(', ') || 'N/A'}
+Culture: ${company.workCulture || 'N/A'}
+Interview Expectations: ${company.interviewExpectations || 'N/A'}`;
     }
   }
 

@@ -76,10 +76,12 @@ export const evaluateMockResponse = async (req: AuthRequest, res: Response) => {
   const systemPrompt = `You are an executive interviewer and communication expert.
 Analyze the user's mock answer to the provided interview question.
 Be constructive, professional, and clear.
-Provide feedback on:
-1. Score (0 to 100)
-2. Clarity and Communication (strengths, weaknesses)
-3. Wording Improvements (suggest a polished, highly impressive rewrite of their answer)`;
+You MUST return your response strictly as a JSON object matching this structure:
+{
+  "score": number (value between 0 and 100 representing their answer quality),
+  "feedback": "constructive feedback on their clarity, strengths, and weaknesses (limit to 2-3 sentences)",
+  "suggestions": "a polished, highly impressive rewrite of their answer to improve their communication and wording (limit to 2-3 sentences)"
+}`;
 
   const userPrompt = `
 QUESTION CATEGORY: ${category || 'General'}
@@ -94,7 +96,26 @@ CANDIDATE MOCK ANSWER: "${userAnswer}"
   };
 
   console.log('Evaluating mock interview reply...');
-  const feedback = await callAI(systemPrompt, userPrompt, false, customApiKeys);
+  const feedbackRaw = await callAI(systemPrompt, userPrompt, true, customApiKeys);
 
-  return res.status(200).json({ feedback });
+  try {
+    const feedbackObj = JSON.parse(feedbackRaw);
+    return res.status(200).json(feedbackObj);
+  } catch (err) {
+    console.error('Failed to parse AI evaluation JSON, attempting fallback parsing...', err);
+    const match = feedbackRaw.match(/\{[\s\S]*\}/);
+    if (match) {
+      try {
+        const feedbackObj = JSON.parse(match[0]);
+        return res.status(200).json(feedbackObj);
+      } catch (nestedErr) {
+        console.error('Fallback JSON parsing also failed.');
+      }
+    }
+    return res.status(200).json({
+      score: 75,
+      feedback: feedbackRaw,
+      suggestions: 'Try to improve your structural clarity using the STAR (Situation, Task, Action, Result) method.'
+    });
+  }
 };

@@ -39,6 +39,8 @@ interface AppContextType {
   setIsLoading: (loading: boolean) => void;
   refreshDashboardStats: () => Promise<any>;
   dashboardStats: any;
+  openAiLimitModal: boolean;
+  setOpenAiLimitModal: (open: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -52,18 +54,63 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [activeCompany, setActiveCompanyState] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [dashboardStats, setDashboardStats] = useState<any>(null);
+  const [openAiLimitModal, setOpenAiLimitModal] = useState<boolean>(false);
+
+  // Global Axios Interceptor for AI Limit Hit (HTTP 429 or quota limit error message)
+  useEffect(() => {
+    const interceptor = axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        const status = error.response?.status;
+        const errorMsg = error.response?.data?.error || '';
+        const isLimitHit = status === 429 ||
+          errorMsg.toLowerCase().includes('limit') ||
+          errorMsg.toLowerCase().includes('rate limit') ||
+          errorMsg.toLowerCase().includes('quota') ||
+          errorMsg.toLowerCase().includes('api key') ||
+          errorMsg.toLowerCase().includes('completely unavailable') ||
+          errorMsg.toLowerCase().includes('exhausted');
+
+        if (isLimitHit) {
+          setOpenAiLimitModal(true);
+        }
+        return Promise.reject(error);
+      }
+    );
+    return () => {
+      axios.interceptors.response.eject(interceptor);
+    };
+  }, []);
 
   // Initialize theme and auth from localStorage on mount
   useEffect(() => {
     const storedToken = localStorage.getItem('job_search_token');
     const storedUser = localStorage.getItem('job_search_user');
     const storedTheme = localStorage.getItem('job_search_theme') as 'light' | 'dark';
+    const storedCompany = localStorage.getItem('active_company_cache');
+    const storedResume = localStorage.getItem('active_resume_cache');
 
     if (storedToken && storedUser) {
       setToken(storedToken);
       const parsedUser = JSON.parse(storedUser);
       setUser(parsedUser);
       axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+    }
+
+    if (storedCompany) {
+      try {
+        setActiveCompanyState(JSON.parse(storedCompany));
+      } catch (e) {
+        console.error('Failed to parse cached company:', e);
+      }
+    }
+
+    if (storedResume) {
+      try {
+        setActiveResumeState(JSON.parse(storedResume));
+      } catch (e) {
+        console.error('Failed to parse cached resume:', e);
+      }
     }
 
     const initialTheme = storedTheme || 'dark';
@@ -193,6 +240,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsLoading,
         refreshDashboardStats,
         dashboardStats,
+        openAiLimitModal,
+        setOpenAiLimitModal,
       }}
     >
       {children}

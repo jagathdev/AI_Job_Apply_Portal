@@ -21,8 +21,8 @@ You are visible as a floating assistant on every page. You MUST use the provided
 - Use markdown bolding and lists to keep answers extremely readable and punchy.
 
 CURRENT CONTEXT CONFIGURED:
-- RESUME: ${context.resumeText ? 'Configured (' + context.resumeText.substring(0, 400) + '...)' : 'Not uploaded yet'}
-- COMPANY / JOB DESCRIPTION: ${context.companyJD ? 'Configured (' + context.companyJD.substring(0, 400) + '...)' : 'Not analyzed yet'}
+- RESUME: ${context.resumeText || 'Not uploaded yet'}
+- COMPANY / JOB DESCRIPTION: ${context.companyJD || 'Not analyzed yet'}
 - CURRENT ATS SCORE: ${context.atsScore !== undefined ? context.atsScore + '/100' : 'No ATS check run yet'}
 - INTERVIEW PREP STATE: ${context.interviewPrep ? 'Configured' : 'Not generated yet'}
 

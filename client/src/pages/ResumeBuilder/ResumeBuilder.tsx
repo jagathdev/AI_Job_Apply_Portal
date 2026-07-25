@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import axios from 'axios';
 import {
   Sparkles, FileText, Upload, Brain, Eye, Save, Plus, Trash2,
-  Download, CheckCircle, TrendingUp, HelpCircle, Edit, ListCheck
+  Download, CheckCircle, TrendingUp, HelpCircle, Edit, ListCheck, ArrowLeft
 } from 'lucide-react';
 
 export const ResumeBuilder: React.FC = () => {
@@ -241,80 +242,107 @@ export const ResumeBuilder: React.FC = () => {
 <html>
 <head>
   <meta charset="utf-8">
-  <title>${personal.fullName || 'Resume'}_ATS_Tailored</title>
+  <title>${personal.fullName || 'Resume'}</title>
   <style>
-    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1f2937; line-height: 1.5; padding: 40px; margin: 0; }
-    h1 { font-size: 24px; font-weight: bold; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
-    h2 { font-size: 14px; border-bottom: 2px solid #374151; padding-bottom: 3px; margin-top: 25px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; color: #111827; }
-    h3 { font-size: 13px; font-weight: bold; margin: 0; color: #111827; }
-    p { font-size: 11px; margin: 5px 0 10px 0; color: #4b5563; }
-    .header { text-align: center; margin-bottom: 25px; }
-    .contact-info { font-size: 11px; color: #4b5563; margin-top: 5px; }
-    .contact-info span { margin: 0 8px; }
-    .section-row { display: flex; justify-content: space-between; margin-bottom: 3px; }
-    .dates { font-size: 11px; font-weight: bold; color: #3b82f6; }
-    .experience-block, .project-block, .edu-block { margin-bottom: 15px; }
-    .description { font-size: 11px; text-align: justify; margin-top: 4px; white-space: pre-wrap; color: #374151; }
-    .skills-grid { font-size: 11px; font-weight: bold; color: #111827; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    @page { margin: 0; }
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; color: #334155; line-height: 1.4; padding: 35px 45px; margin: 0; font-size: 11px; background: #fff; }
+    .header { margin-bottom: 20px; }
+    h1 { font-size: 28px; font-weight: 800; margin: 0 0 6px 0; color: #0f172a; letter-spacing: -0.5px; }
+    .contact-info { font-size: 10.5px; color: #64748b; font-weight: 500; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+    .contact-info a { color: #3b82f6; text-decoration: none; }
+    .contact-info .divider { color: #cbd5e1; }
+    h2 { font-size: 13px; font-weight: 700; margin: 16px 0 8px 0; text-transform: uppercase; color: #1e40af; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px; letter-spacing: 0.5px; }
+    p { margin: 6px 0; text-align: justify; color: #475569; }
+    ul { margin: 6px 0 12px 0; padding-left: 18px; color: #475569; }
+    li { margin-bottom: 4px; line-height: 1.5; }
+    .section-row { display: flex; justify-content: space-between; margin-bottom: 4px; align-items: flex-start; }
+    .item-title { font-weight: 700; color: #0f172a; font-size: 12px; }
+    .item-subtitle { font-weight: 600; color: #3b82f6; font-size: 11px; margin-left: 6px; }
+    .item-date { font-size: 10px; font-weight: 600; color: #64748b; white-space: nowrap; background: #f8fafc; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0; }
+    .skills-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+    .skill-tag { background: #eff6ff; color: #1e40af; padding: 3px 8px; border-radius: 6px; font-size: 10.5px; font-weight: 600; border: 1px solid #bfdbfe; }
+    .skills-bullet-list { margin: 2px 0 6px 0; padding-left: 18px; }
+    .skills-bullet-list li { margin-bottom: 1px; line-height: 1.3; }
+    .tech-stack { font-size: 10px; color: #64748b; margin-top: 2px; font-weight: 500; }
+    .score-badge { font-size: 10px; color: #059669; background: #d1fae5; padding: 2px 6px; border-radius: 4px; font-weight: 600; margin-top: 4px; display: inline-block; }
   </style>
 </head>
 <body>
   <div class="header">
     <h1>${personal.fullName || 'Candidate Name'}</h1>
     <div class="contact-info">
-      <span>Email: ${personal.email || 'N/A'}</span>|
-      <span>Phone: ${personal.phone || 'N/A'}</span>|
-      <span>Location: ${personal.location || 'N/A'}</span>
-      ${personal.website ? `|<br><span>Portfolio: ${personal.website}</span>` : ''}
-      ${personal.linkedIn ? `|<span>LinkedIn: ${personal.linkedIn}</span>` : ''}
+      ${personal.location ? `<span>${personal.location}</span>` : ''}
+      ${personal.location && (personal.phone || personal.email || personal.linkedIn || personal.website) ? '<span class="divider">&bull;</span>' : ''}
+      ${personal.phone ? `<span>${personal.phone}</span>` : ''}
+      ${personal.phone && (personal.email || personal.linkedIn || personal.website) ? '<span class="divider">&bull;</span>' : ''}
+      ${personal.email ? `<a href="mailto:${personal.email}">${personal.email}</a>` : ''}
+      ${personal.email && (personal.linkedIn || personal.website) ? '<span class="divider">&bull;</span>' : ''}
+      ${personal.linkedIn ? `<a href="${personal.linkedIn}">${personal.linkedIn.replace(/^https?:\/\//, '').replace(/\/$/, '')}</a>` : ''}
+      ${personal.linkedIn && personal.website ? '<span class="divider">&bull;</span>' : ''}
+      ${personal.website ? `<a href="${personal.website}">${personal.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}</a>` : ''}
     </div>
   </div>
 
   ${editorState.summary ? `
-  <h2>Executive Summary</h2>
-  <p style="font-size: 11px; text-align: justify;">${editorState.summary}</p>
+  <h2>Professional Summary</h2>
+  <p>${editorState.summary}</p>
   ` : ''}
 
-  <h2>Core Competencies</h2>
-  <div class="skills-grid">${editorState.skills?.join('  •  ')}</div>
+  ${editorState.skills?.length > 0 ? `
+  <h2>Technical Skills</h2>
+  <div class="skills-inline" style="margin-top: 4px; line-height: 1.5;">
+    ${editorState.skills.join(', ')}
+  </div>
+  ` : ''}
 
+  ${editorState.experience?.length > 0 ? `
   <h2>Professional Experience</h2>
-  ${editorState.experience?.map((exp: any) => `
-    <div class="experience-block">
+  ${editorState.experience.map((exp: any) => `
+    <div style="margin-bottom: 12px;">
       <div class="section-row">
-        <h3>${exp.role} — <i>${exp.company}</i></h3>
-        <span class="dates">${exp.duration}</span>
+        <div><span class="item-title">${exp.role}</span> <span class="item-subtitle">${exp.company}</span></div>
+        <div class="item-date">${exp.duration}</div>
       </div>
-      <div class="description">${exp.description}</div>
+      <ul>
+        ${exp.description.split('\n').filter((l: string) => l.trim()).map((l: string) => `<li>${l.replace(/^[-•]\s*/, '')}</li>`).join('')}
+      </ul>
     </div>
   `).join('')}
+  ` : ''}
 
-  <h2>Key Projects</h2>
-  ${editorState.projects?.map((proj: any) => `
-    <div class="project-block">
+  ${editorState.projects?.length > 0 ? `
+  <h2>Projects</h2>
+  ${editorState.projects.map((proj: any) => `
+    <div style="margin-bottom: 12px;">
       <div class="section-row">
-        <h3>${proj.title} ${proj.techStack?.length ? `(${proj.techStack.join(', ')})` : ''}</h3>
-        ${proj.link ? `<span class="dates">${proj.link}</span>` : ''}
+        <div><span class="item-title">${proj.title}</span> ${proj.link ? `<span style="margin-left:6px; font-size:11px"><a href="${proj.link}">Link</a></span>` : ''}</div>
       </div>
-      <div class="description">${proj.description}</div>
+      ${proj.techStack?.length ? `<div class="tech-stack">Built with: ${proj.techStack.join(', ')}</div>` : ''}
+      <ul>
+        ${proj.description.split('\n').filter((l: string) => l.trim()).map((l: string) => `<li>${l.replace(/^[-•]\s*/, '')}</li>`).join('')}
+      </ul>
     </div>
   `).join('')}
+  ` : ''}
 
-  <h2>Education & Credentials</h2>
-  ${editorState.education?.map((edu: any) => `
-    <div class="edu-block">
+  ${editorState.education?.length > 0 ? `
+  <h2>Education</h2>
+  ${editorState.education.map((edu: any) => `
+    <div style="margin-bottom: 10px;">
       <div class="section-row">
-        <h3>${edu.degree}</h3>
-        <span class="dates">${edu.duration}</span>
+        <div><span class="item-title">${edu.degree}</span> <span class="item-subtitle">${edu.institution}</span></div>
+        <div class="item-date">${edu.duration}</div>
       </div>
-      <p style="margin: 2px 0;">${edu.institution} ${edu.details ? `— ${edu.details}` : ''}</p>
+      ${edu.details ? `<div class="score-badge">Score: ${edu.details}</div>` : ''}
     </div>
   `).join('')}
+  ` : ''}
   
   ${editorState.achievements?.length ? `
-  <h2>Achievements & Honors</h2>
-  <ul style="font-size: 11px; padding-left: 20px; color: #374151; margin: 5px 0;">
-    ${editorState.achievements.map((ach: string) => `<li style="margin-bottom: 4px;">${ach}</li>`).join('')}
+  <h2>Certifications & Achievements</h2>
+  <ul style="margin-bottom: 0;">
+    ${editorState.achievements.map((ach: string) => `<li>${ach}</li>`).join('')}
   </ul>
   ` : ''}
 </body>
@@ -361,7 +389,28 @@ export const ResumeBuilder: React.FC = () => {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-zinc-50 px-4 py-8 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 transition-colors duration-300">
-      <div className="mx-auto max-w-7xl space-y-8">
+      <div className="mx-auto max-w-7xl space-y-6">
+
+        {/* Previous Step Back link */}
+        <div className="flex items-center">
+          {activeCompany ? (
+            <Link
+              to={`/company/${activeCompany._id}`}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-500 hover:text-indigo-600 transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Company Details
+            </Link>
+          ) : (
+            <Link
+              to="/dashboard"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-500 hover:text-indigo-600 transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Dashboard
+            </Link>
+          )}
+        </div>
 
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-5">
@@ -411,446 +460,378 @@ export const ResumeBuilder: React.FC = () => {
           </div>
         </div>
 
-        {/* Triple Panel Layout */}
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+        {/* Triple Panel Layout or Upload Prompt */}
+        {(!activeResume && resumes.length === 0) ? (
+          <div className="flex flex-col items-center justify-center py-20 px-4 border border-zinc-200 dark:border-zinc-800 rounded-2xl border-dashed bg-white dark:bg-zinc-900 text-center shadow-sm">
+            <Upload className="h-16 w-16 text-indigo-200 dark:text-indigo-900 mb-6" />
+            <h3 className="text-xl font-bold text-zinc-800 dark:text-zinc-200 mb-2">Upload your reference resume</h3>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-8 max-w-md">
+              To get started, please upload your core resume. We'll parse it and you can use it to generate tailored versions for any job application.
+            </p>
+            <label className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold cursor-pointer transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:-translate-y-0.5">
+              <Upload className="h-4.5 w-4.5" />
+              {isUploading ? 'Parsing document...' : 'Upload PDF / DOCX Resume'}
+              <input
+                type="file"
+                disabled={isUploading}
+                accept=".pdf,.docx"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+            </label>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
 
-          {/* Panel 1: Document Section Editors (span 4) */}
-          <div className="xl:col-span-4 rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900 shadow-sm space-y-6">
+            {/* Panel 1: Document Section Editors (span 4) */}
+            <div className="xl:col-span-4 rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900 shadow-sm space-y-6">
 
-            {/* Form Section Selector */}
-            <div className="flex border-b border-zinc-150 dark:border-zinc-800 pb-2.5 gap-3.5 overflow-x-auto">
-              {[
-                { id: 'info', label: 'Contact' },
-                { id: 'summary', label: 'Profile' },
-                { id: 'skills', label: 'Skills' },
-                { id: 'experience', label: 'Experience' },
-                { id: 'education', label: 'Education' },
-                { id: 'projects', label: 'Projects' }
-              ].map((sect) => (
-                <button
-                  key={sect.id}
-                  onClick={() => setActiveTab(sect.id as any)}
-                  className={`pb-1 text-[11px] font-bold tracking-tight border-b-2 whitespace-nowrap transition-all cursor-pointer ${activeTab === sect.id
+              {/* Form Section Selector */}
+              <div className="flex border-b border-zinc-150 dark:border-zinc-800 pb-2.5 gap-3.5 overflow-x-auto">
+                {[
+                  { id: 'info', label: 'Contact' },
+                  { id: 'summary', label: 'Profile' },
+                  { id: 'skills', label: 'Skills' },
+                  { id: 'experience', label: 'Experience' },
+                  { id: 'education', label: 'Education' },
+                  { id: 'projects', label: 'Projects' }
+                ].map((sect) => (
+                  <button
+                    key={sect.id}
+                    onClick={() => setActiveTab(sect.id as any)}
+                    className={`pb-1 text-[11px] font-bold tracking-tight border-b-2 whitespace-nowrap transition-all cursor-pointer ${activeTab === sect.id
                       ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
                       : 'border-transparent text-zinc-400 hover:text-zinc-600'
-                    }`}
-                >
-                  {sect.label}
-                </button>
-              ))}
-            </div>
+                      }`}
+                  >
+                    {sect.label}
+                  </button>
+                ))}
+              </div>
 
-            <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1">
+              <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1">
 
-              {/* Contact Editor */}
-              {activeTab === 'info' && (
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-[10px] uppercase font-bold text-zinc-400 mb-1">Full Name</label>
-                    <input
-                      type="text"
-                      value={editorState.personalInfo.fullName}
-                      onChange={(e) => updatePersonalInfo('fullName', e.target.value)}
-                      className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 p-2.5 text-xs outline-none dark:border-zinc-800 dark:bg-zinc-950 focus:bg-white"
-                    />
+                {/* Contact Editor */}
+                {activeTab === 'info' && (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-[10px] uppercase font-bold text-zinc-400 mb-1">Full Name</label>
+                      <input
+                        type="text"
+                        value={editorState.personalInfo.fullName}
+                        onChange={(e) => updatePersonalInfo('fullName', e.target.value)}
+                        className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 p-2.5 text-xs outline-none dark:border-zinc-800 dark:bg-zinc-950 focus:bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase font-bold text-zinc-400 mb-1">Email</label>
+                      <input
+                        type="email"
+                        value={editorState.personalInfo.email}
+                        onChange={(e) => updatePersonalInfo('email', e.target.value)}
+                        className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 p-2.5 text-xs outline-none dark:border-zinc-800 dark:bg-zinc-950 focus:bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase font-bold text-zinc-400 mb-1">Phone</label>
+                      <input
+                        type="text"
+                        value={editorState.personalInfo.phone}
+                        onChange={(e) => updatePersonalInfo('phone', e.target.value)}
+                        className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 p-2.5 text-xs outline-none dark:border-zinc-800 dark:bg-zinc-950 focus:bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase font-bold text-zinc-400 mb-1">Location</label>
+                      <input
+                        type="text"
+                        value={editorState.personalInfo.location}
+                        onChange={(e) => updatePersonalInfo('location', e.target.value)}
+                        className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 p-2.5 text-xs outline-none dark:border-zinc-800 dark:bg-zinc-950 focus:bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase font-bold text-zinc-400 mb-1">LinkedIn</label>
+                      <input
+                        type="text"
+                        value={editorState.personalInfo.linkedIn}
+                        onChange={(e) => updatePersonalInfo('linkedIn', e.target.value)}
+                        className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 p-2.5 text-xs outline-none dark:border-zinc-800 dark:bg-zinc-950 focus:bg-white"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-[10px] uppercase font-bold text-zinc-400 mb-1">Email</label>
-                    <input
-                      type="email"
-                      value={editorState.personalInfo.email}
-                      onChange={(e) => updatePersonalInfo('email', e.target.value)}
-                      className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 p-2.5 text-xs outline-none dark:border-zinc-800 dark:bg-zinc-950 focus:bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] uppercase font-bold text-zinc-400 mb-1">Phone</label>
-                    <input
-                      type="text"
-                      value={editorState.personalInfo.phone}
-                      onChange={(e) => updatePersonalInfo('phone', e.target.value)}
-                      className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 p-2.5 text-xs outline-none dark:border-zinc-800 dark:bg-zinc-950 focus:bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] uppercase font-bold text-zinc-400 mb-1">Location</label>
-                    <input
-                      type="text"
-                      value={editorState.personalInfo.location}
-                      onChange={(e) => updatePersonalInfo('location', e.target.value)}
-                      className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 p-2.5 text-xs outline-none dark:border-zinc-800 dark:bg-zinc-950 focus:bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] uppercase font-bold text-zinc-400 mb-1">LinkedIn</label>
-                    <input
-                      type="text"
-                      value={editorState.personalInfo.linkedIn}
-                      onChange={(e) => updatePersonalInfo('linkedIn', e.target.value)}
-                      className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 p-2.5 text-xs outline-none dark:border-zinc-800 dark:bg-zinc-950 focus:bg-white"
-                    />
-                  </div>
-                </div>
-              )}
+                )}
 
-              {/* Profile/Summary Editor */}
-              {activeTab === 'summary' && (
-                <div>
-                  <label className="block text-[10px] uppercase font-bold text-zinc-400 mb-1">Professional Summary</label>
-                  <textarea
-                    value={editorState.summary}
-                    onChange={(e) => setEditorState((prev: any) => ({ ...prev, summary: e.target.value }))}
-                    rows={8}
-                    className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 p-3 text-xs outline-none dark:border-zinc-800 dark:bg-zinc-950 focus:bg-white leading-relaxed"
-                  />
-                </div>
-              )}
+                {/* Profile/Summary Editor */}
+                {activeTab === 'summary' && (
+                  <div>
+                    <label className="block text-[10px] uppercase font-bold text-zinc-400 mb-1">Professional Summary</label>
+                    <textarea
+                      value={editorState.summary}
+                      onChange={(e) => setEditorState((prev: any) => ({ ...prev, summary: e.target.value }))}
+                      rows={8}
+                      className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 p-3 text-xs outline-none dark:border-zinc-800 dark:bg-zinc-950 focus:bg-white leading-relaxed"
+                    />
+                  </div>
+                )}
 
-              {/* Skills tags list */}
-              {activeTab === 'skills' && (
-                <div className="space-y-4">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      id="newSkillInput"
-                      placeholder="e.g. Docker, Redux"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          const val = (e.target as HTMLInputElement).value.trim();
+                {/* Skills tags list */}
+                {activeTab === 'skills' && (
+                  <div className="space-y-4">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        id="newSkillInput"
+                        placeholder="e.g. Docker, Redux"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            const val = (e.target as HTMLInputElement).value.trim();
+                            if (val && !editorState.skills.includes(val)) {
+                              setEditorState((prev: any) => ({ ...prev, skills: [...prev.skills, val] }));
+                              (e.target as HTMLInputElement).value = '';
+                            }
+                          }
+                        }}
+                        className="flex-1 rounded-xl border border-zinc-200 bg-zinc-50/50 p-2.5 text-xs outline-none dark:border-zinc-800 dark:bg-zinc-950"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const input = document.getElementById('newSkillInput') as HTMLInputElement;
+                          const val = input.value.trim();
                           if (val && !editorState.skills.includes(val)) {
                             setEditorState((prev: any) => ({ ...prev, skills: [...prev.skills, val] }));
-                            (e.target as HTMLInputElement).value = '';
+                            input.value = '';
                           }
-                        }
-                      }}
-                      className="flex-1 rounded-xl border border-zinc-200 bg-zinc-50/50 p-2.5 text-xs outline-none dark:border-zinc-800 dark:bg-zinc-950"
-                    />
+                        }}
+                        className="px-3.5 bg-indigo-600 text-white rounded-xl text-xs font-bold"
+                      >
+                        Add
+                      </button>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5 pt-2">
+                      {editorState.skills?.map((skill: string, idx: number) => (
+                        <span key={idx} className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                          {skill}
+                          <button onClick={() => removeArrayItem('skills', idx)} className="text-zinc-400 hover:text-red-500">×</button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Experience Array Editor */}
+                {activeTab === 'experience' && (
+                  <div className="space-y-5">
                     <button
                       type="button"
-                      onClick={() => {
-                        const input = document.getElementById('newSkillInput') as HTMLInputElement;
-                        const val = input.value.trim();
-                        if (val && !editorState.skills.includes(val)) {
-                          setEditorState((prev: any) => ({ ...prev, skills: [...prev.skills, val] }));
-                          input.value = '';
-                        }
-                      }}
-                      className="px-3.5 bg-indigo-600 text-white rounded-xl text-xs font-bold"
+                      onClick={() => addArrayItem('experience', { company: 'New Company', role: 'Software Engineer', duration: 'Jan 2024 - Present', description: '• Handled production scaling.' })}
+                      className="w-full py-2.5 rounded-xl border border-dashed border-indigo-200 text-indigo-600 dark:border-indigo-900/50 dark:text-indigo-400 hover:bg-indigo-50/50 text-xs font-bold transition-all cursor-pointer"
                     >
-                      Add
+                      + Add Experience Block
                     </button>
-                  </div>
 
-                  <div className="flex flex-wrap gap-1.5 pt-2">
-                    {editorState.skills?.map((skill: string, idx: number) => (
-                      <span key={idx} className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
-                        {skill}
-                        <button onClick={() => removeArrayItem('skills', idx)} className="text-zinc-400 hover:text-red-500">×</button>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+                    {editorState.experience?.map((exp: any, idx: number) => (
+                      <div key={idx} className="p-4 rounded-xl border border-zinc-150 bg-zinc-50/40 dark:border-zinc-800 dark:bg-zinc-950/40 space-y-3.5 relative">
+                        <button
+                          onClick={() => removeArrayItem('experience', idx)}
+                          className="absolute top-3.5 right-3.5 text-zinc-400 hover:text-red-500"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
 
-              {/* Experience Array Editor */}
-              {activeTab === 'experience' && (
-                <div className="space-y-5">
-                  <button
-                    type="button"
-                    onClick={() => addArrayItem('experience', { company: 'New Company', role: 'Software Engineer', duration: 'Jan 2024 - Present', description: '• Handled production scaling.' })}
-                    className="w-full py-2.5 rounded-xl border border-dashed border-indigo-200 text-indigo-600 dark:border-indigo-900/50 dark:text-indigo-400 hover:bg-indigo-50/50 text-xs font-bold transition-all cursor-pointer"
-                  >
-                    + Add Experience Block
-                  </button>
-
-                  {editorState.experience?.map((exp: any, idx: number) => (
-                    <div key={idx} className="p-4 rounded-xl border border-zinc-150 bg-zinc-50/40 dark:border-zinc-800 dark:bg-zinc-950/40 space-y-3.5 relative">
-                      <button
-                        onClick={() => removeArrayItem('experience', idx)}
-                        className="absolute top-3.5 right-3.5 text-zinc-400 hover:text-red-500"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-
-                      <div className="grid grid-cols-2 gap-3.5">
-                        <div>
-                          <label className="block text-[10px] uppercase font-bold text-zinc-400">Company</label>
-                          <input
-                            type="text"
-                            value={exp.company}
-                            onChange={(e) => updateArrayItem('experience', idx, 'company', e.target.value)}
-                            className="w-full border-b border-zinc-200 bg-transparent py-1 text-xs outline-none"
-                          />
+                        <div className="grid grid-cols-2 gap-3.5">
+                          <div>
+                            <label className="block text-[10px] uppercase font-bold text-zinc-400">Company</label>
+                            <input
+                              type="text"
+                              value={exp.company}
+                              onChange={(e) => updateArrayItem('experience', idx, 'company', e.target.value)}
+                              className="w-full border-b border-zinc-200 bg-transparent py-1 text-xs outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] uppercase font-bold text-zinc-400">Role</label>
+                            <input
+                              type="text"
+                              value={exp.role}
+                              onChange={(e) => updateArrayItem('experience', idx, 'role', e.target.value)}
+                              className="w-full border-b border-zinc-200 bg-transparent py-1 text-xs outline-none"
+                            />
+                          </div>
                         </div>
-                        <div>
-                          <label className="block text-[10px] uppercase font-bold text-zinc-400">Role</label>
-                          <input
-                            type="text"
-                            value={exp.role}
-                            onChange={(e) => updateArrayItem('experience', idx, 'role', e.target.value)}
-                            className="w-full border-b border-zinc-200 bg-transparent py-1 text-xs outline-none"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-[10px] uppercase font-bold text-zinc-400">Duration</label>
-                        <input
-                          type="text"
-                          value={exp.duration}
-                          onChange={(e) => updateArrayItem('experience', idx, 'duration', e.target.value)}
-                          className="w-full border-b border-zinc-200 bg-transparent py-1 text-xs outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] uppercase font-bold text-zinc-400">STAR Description</label>
-                        <textarea
-                          value={exp.description}
-                          onChange={(e) => updateArrayItem('experience', idx, 'description', e.target.value)}
-                          rows={4}
-                          className="w-full border border-zinc-200 bg-transparent p-2.5 text-[11px] outline-none rounded-xl"
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Education Array Editor */}
-              {activeTab === 'education' && (
-                <div className="space-y-5">
-                  <button
-                    type="button"
-                    onClick={() => addArrayItem('education', { institution: 'University Name', degree: 'B.S. Computer Science', duration: '2020 - 2024', details: 'GPA 3.8' })}
-                    className="w-full py-2.5 rounded-xl border border-dashed border-indigo-200 text-indigo-600 dark:border-indigo-900/50 dark:text-indigo-400 hover:bg-indigo-50/50 text-xs font-bold transition-all cursor-pointer"
-                  >
-                    + Add Academic Block
-                  </button>
-
-                  {editorState.education?.map((edu: any, idx: number) => (
-                    <div key={idx} className="p-4 rounded-xl border border-zinc-150 bg-zinc-50/40 dark:border-zinc-800 dark:bg-zinc-950/40 space-y-3.5 relative">
-                      <button
-                        onClick={() => removeArrayItem('education', idx)}
-                        className="absolute top-3.5 right-3.5 text-zinc-400 hover:text-red-500"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-
-                      <div>
-                        <label className="block text-[10px] uppercase font-bold text-zinc-400">Institution</label>
-                        <input
-                          type="text"
-                          value={edu.institution}
-                          onChange={(e) => updateArrayItem('education', idx, 'institution', e.target.value)}
-                          className="w-full border-b border-zinc-200 bg-transparent py-1 text-xs outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] uppercase font-bold text-zinc-400">Degree</label>
-                        <input
-                          type="text"
-                          value={edu.degree}
-                          onChange={(e) => updateArrayItem('education', idx, 'degree', e.target.value)}
-                          className="w-full border-b border-zinc-200 bg-transparent py-1 text-xs outline-none"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="block text-[10px] uppercase font-bold text-zinc-400">Duration</label>
                           <input
                             type="text"
-                            value={edu.duration}
-                            onChange={(e) => updateArrayItem('education', idx, 'duration', e.target.value)}
+                            value={exp.duration}
+                            onChange={(e) => updateArrayItem('experience', idx, 'duration', e.target.value)}
                             className="w-full border-b border-zinc-200 bg-transparent py-1 text-xs outline-none"
                           />
                         </div>
                         <div>
-                          <label className="block text-[10px] uppercase font-bold text-zinc-400">Details</label>
-                          <input
-                            type="text"
-                            value={edu.details}
-                            onChange={(e) => updateArrayItem('education', idx, 'details', e.target.value)}
-                            className="w-full border-b border-zinc-200 bg-transparent py-1 text-xs outline-none"
+                          <label className="block text-[10px] uppercase font-bold text-zinc-400">Description</label>
+                          <textarea
+                            value={exp.description}
+                            onChange={(e) => updateArrayItem('experience', idx, 'description', e.target.value)}
+                            rows={4}
+                            className="w-full border border-zinc-200 bg-transparent p-2.5 text-[11px] outline-none rounded-xl"
                           />
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
 
-              {/* Projects Array Editor */}
-              {activeTab === 'projects' && (
-                <div className="space-y-5">
-                  <button
-                    type="button"
-                    onClick={() => addArrayItem('projects', { title: 'Personal Dashboard', description: 'Built interactive dashboard.', techStack: ['React'], link: 'https://github.com' })}
-                    className="w-full py-2.5 rounded-xl border border-dashed border-indigo-200 text-indigo-600 dark:border-indigo-900/50 dark:text-indigo-400 hover:bg-indigo-50/50 text-xs font-bold transition-all cursor-pointer"
-                  >
-                    + Add Project Block
-                  </button>
+                {/* Education Array Editor */}
+                {activeTab === 'education' && (
+                  <div className="space-y-5">
+                    <button
+                      type="button"
+                      onClick={() => addArrayItem('education', { institution: 'University Name', degree: 'B.S. Computer Science', duration: '2020 - 2024', details: 'GPA 3.8' })}
+                      className="w-full py-2.5 rounded-xl border border-dashed border-indigo-200 text-indigo-600 dark:border-indigo-900/50 dark:text-indigo-400 hover:bg-indigo-50/50 text-xs font-bold transition-all cursor-pointer"
+                    >
+                      + Add Academic Block
+                    </button>
 
-                  {editorState.projects?.map((proj: any, idx: number) => (
-                    <div key={idx} className="p-4 rounded-xl border border-zinc-150 bg-zinc-50/40 dark:border-zinc-800 dark:bg-zinc-950/40 space-y-3.5 relative">
-                      <button
-                        onClick={() => removeArrayItem('projects', idx)}
-                        className="absolute top-3.5 right-3.5 text-zinc-400 hover:text-red-500"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                    {editorState.education?.map((edu: any, idx: number) => (
+                      <div key={idx} className="p-4 rounded-xl border border-zinc-150 bg-zinc-50/40 dark:border-zinc-800 dark:bg-zinc-950/40 space-y-3.5 relative">
+                        <button
+                          onClick={() => removeArrayItem('education', idx)}
+                          className="absolute top-3.5 right-3.5 text-zinc-400 hover:text-red-500"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
 
-                      <div>
-                        <label className="block text-[10px] uppercase font-bold text-zinc-400">Project Title</label>
-                        <input
-                          type="text"
-                          value={proj.title}
-                          onChange={(e) => updateArrayItem('projects', idx, 'title', e.target.value)}
-                          className="w-full border-b border-zinc-200 bg-transparent py-1 text-xs outline-none"
-                        />
+                        <div>
+                          <label className="block text-[10px] uppercase font-bold text-zinc-400">Institution</label>
+                          <input
+                            type="text"
+                            value={edu.institution}
+                            onChange={(e) => updateArrayItem('education', idx, 'institution', e.target.value)}
+                            className="w-full border-b border-zinc-200 bg-transparent py-1 text-xs outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] uppercase font-bold text-zinc-400">Degree</label>
+                          <input
+                            type="text"
+                            value={edu.degree}
+                            onChange={(e) => updateArrayItem('education', idx, 'degree', e.target.value)}
+                            className="w-full border-b border-zinc-200 bg-transparent py-1 text-xs outline-none"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[10px] uppercase font-bold text-zinc-400">Duration</label>
+                            <input
+                              type="text"
+                              value={edu.duration}
+                              onChange={(e) => updateArrayItem('education', idx, 'duration', e.target.value)}
+                              className="w-full border-b border-zinc-200 bg-transparent py-1 text-xs outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] uppercase font-bold text-zinc-400">Details</label>
+                            <input
+                              type="text"
+                              value={edu.details}
+                              onChange={(e) => updateArrayItem('education', idx, 'details', e.target.value)}
+                              className="w-full border-b border-zinc-200 bg-transparent py-1 text-xs outline-none"
+                            />
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <label className="block text-[10px] uppercase font-bold text-zinc-400">Link</label>
-                        <input
-                          type="text"
-                          value={proj.link}
-                          onChange={(e) => updateArrayItem('projects', idx, 'link', e.target.value)}
-                          className="w-full border-b border-zinc-200 bg-transparent py-1 text-xs outline-none"
-                        />
+                    ))}
+                  </div>
+                )}
+
+                {/* Projects Array Editor */}
+                {activeTab === 'projects' && (
+                  <div className="space-y-5">
+                    <button
+                      type="button"
+                      onClick={() => addArrayItem('projects', { title: 'Personal Dashboard', description: 'Built interactive dashboard.', techStack: ['React'], link: 'https://github.com' })}
+                      className="w-full py-2.5 rounded-xl border border-dashed border-indigo-200 text-indigo-600 dark:border-indigo-900/50 dark:text-indigo-400 hover:bg-indigo-50/50 text-xs font-bold transition-all cursor-pointer"
+                    >
+                      + Add Project Block
+                    </button>
+
+                    {editorState.projects?.map((proj: any, idx: number) => (
+                      <div key={idx} className="p-4 rounded-xl border border-zinc-150 bg-zinc-50/40 dark:border-zinc-800 dark:bg-zinc-950/40 space-y-3.5 relative">
+                        <button
+                          onClick={() => removeArrayItem('projects', idx)}
+                          className="absolute top-3.5 right-3.5 text-zinc-400 hover:text-red-500"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+
+                        <div>
+                          <label className="block text-[10px] uppercase font-bold text-zinc-400">Project Title</label>
+                          <input
+                            type="text"
+                            value={proj.title}
+                            onChange={(e) => updateArrayItem('projects', idx, 'title', e.target.value)}
+                            className="w-full border-b border-zinc-200 bg-transparent py-1 text-xs outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] uppercase font-bold text-zinc-400">Link</label>
+                          <input
+                            type="text"
+                            value={proj.link}
+                            onChange={(e) => updateArrayItem('projects', idx, 'link', e.target.value)}
+                            className="w-full border-b border-zinc-200 bg-transparent py-1 text-xs outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] uppercase font-bold text-zinc-400">Description</label>
+                          <textarea
+                            value={proj.description}
+                            onChange={(e) => updateArrayItem('projects', idx, 'description', e.target.value)}
+                            rows={3}
+                            className="w-full border border-zinc-200 bg-transparent p-2.5 text-[11px] outline-none rounded-xl"
+                          />
+                        </div>
                       </div>
-                      <div>
-                        <label className="block text-[10px] uppercase font-bold text-zinc-400">Description</label>
-                        <textarea
-                          value={proj.description}
-                          onChange={(e) => updateArrayItem('projects', idx, 'description', e.target.value)}
-                          rows={3}
-                          className="w-full border border-zinc-200 bg-transparent p-2.5 text-[11px] outline-none rounded-xl"
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
 
-            </div>
-
-            {/* Quick Action bar to save editors to database */}
-            <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-end">
-              <button
-                onClick={handleSaveEditor}
-                className="flex items-center gap-1.5 px-4.5 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-md transition-all cursor-pointer"
-              >
-                <Save className="h-4 w-4" />
-                Save Resume Edits
-              </button>
-            </div>
-
-          </div>
-
-          {/* Panel 2: Real-time Live Document Preview (span 5) */}
-          <div className="xl:col-span-5 rounded-2xl border border-zinc-200 bg-zinc-200/50 p-5 dark:border-zinc-900 dark:bg-zinc-950/40 shadow-sm flex flex-col">
-
-            <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-zinc-300 dark:border-zinc-800">
-              <span className="flex items-center gap-1.5 text-xs font-bold text-zinc-500">
-                <Eye className="h-4.5 w-4.5" />
-                Interactive Document Preview
-              </span>
-            </div>
-
-            {/* Document sheet */}
-            <div className="flex-1 bg-white p-6 shadow-md border border-zinc-300 dark:border-zinc-900 rounded-xl max-h-[620px] overflow-y-auto text-zinc-800 font-sans text-left transition-colors duration-200">
-
-              {/* Document Header */}
-              <div className="text-center space-y-1 mb-5">
-                <h2 className="text-xl font-bold tracking-tight text-zinc-900 uppercase">{editorState.personalInfo.fullName || 'Candidate Name'}</h2>
-                <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[9px] text-zinc-500 font-medium">
-                  <span>{editorState.personalInfo.email || 'email@example.com'}</span>
-                  <span>•</span>
-                  <span>{editorState.personalInfo.phone || 'phone'}</span>
-                  <span>•</span>
-                  <span>{editorState.personalInfo.location || 'location'}</span>
-                  {editorState.personalInfo.linkedIn && (
-                    <>
-                      <span>•</span>
-                      <span className="truncate max-w-[100px]">{editorState.personalInfo.linkedIn}</span>
-                    </>
-                  )}
-                </div>
               </div>
 
-              {/* Profile section */}
-              {editorState.summary && (
-                <div className="mb-4">
-                  <h3 className="text-[10px] font-bold text-zinc-900 uppercase border-b border-zinc-300 pb-0.5 tracking-wider">Executive Summary</h3>
-                  <p className="text-[10px] text-zinc-600 leading-relaxed mt-1">{editorState.summary}</p>
-                </div>
-              )}
-
-              {/* Skills section */}
-              {editorState.skills?.length > 0 && (
-                <div className="mb-4">
-                  <h3 className="text-[10px] font-bold text-zinc-900 uppercase border-b border-zinc-300 pb-0.5 tracking-wider">Core Competencies</h3>
-                  <p className="text-[10px] text-zinc-700 leading-relaxed mt-1 font-semibold">{editorState.skills.join('  •  ')}</p>
-                </div>
-              )}
-
-              {/* Experience section */}
-              {editorState.experience?.length > 0 && (
-                <div className="mb-4">
-                  <h3 className="text-[10px] font-bold text-zinc-900 uppercase border-b border-zinc-300 pb-0.5 tracking-wider">Professional Experience</h3>
-                  <div className="space-y-3 mt-2">
-                    {editorState.experience.map((exp: any, i: number) => (
-                      <div key={i} className="space-y-0.5">
-                        <div className="flex justify-between text-[10px] font-bold">
-                          <span>{exp.role} <span className="font-normal text-zinc-500">— {exp.company}</span></span>
-                          <span className="text-indigo-600">{exp.duration}</span>
-                        </div>
-                        <p className="text-[10px] text-zinc-600 leading-normal whitespace-pre-wrap">{exp.description}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Projects section */}
-              {editorState.projects?.length > 0 && (
-                <div className="mb-4">
-                  <h3 className="text-[10px] font-bold text-zinc-900 uppercase border-b border-zinc-300 pb-0.5 tracking-wider">Selected Projects</h3>
-                  <div className="space-y-3 mt-2">
-                    {editorState.projects.map((proj: any, i: number) => (
-                      <div key={i} className="space-y-0.5">
-                        <div className="flex justify-between text-[10px] font-bold">
-                          <span>{proj.title} <span className="font-normal text-[9px] text-zinc-400">{proj.techStack?.join(', ')}</span></span>
-                          {proj.link && <span className="text-[9px] font-normal text-indigo-500 truncate max-w-[120px]">{proj.link}</span>}
-                        </div>
-                        <p className="text-[10px] text-zinc-600 leading-normal">{proj.description}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Education section */}
-              {editorState.education?.length > 0 && (
-                <div className="mb-4">
-                  <h3 className="text-[10px] font-bold text-zinc-900 uppercase border-b border-zinc-300 pb-0.5 tracking-wider">Academic Education</h3>
-                  <div className="space-y-2 mt-2">
-                    {editorState.education.map((edu: any, i: number) => (
-                      <div key={i} className="text-[10px]">
-                        <div className="flex justify-between font-bold">
-                          <span>{edu.degree}</span>
-                          <span className="text-zinc-500">{edu.duration}</span>
-                        </div>
-                        <p className="text-zinc-600">{edu.institution} {edu.details ? `— ${edu.details}` : ''}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* Quick Action bar to save editors to database */}
+              <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-end">
+                <button
+                  onClick={handleSaveEditor}
+                  className="flex items-center gap-1.5 px-4.5 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-md transition-all cursor-pointer"
+                >
+                  <Save className="h-4 w-4" />
+                  Save Resume Edits
+                </button>
+              </div>
 
             </div>
-          </div>
 
-          {/* Panel 3: Export & AI Sidebar (span 3) */}
-          <div className="xl:col-span-3 rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900 shadow-sm flex flex-col h-fit space-y-6">
+            {/* Panel 2: Real-time Live Document Preview (span 5) */}
+            <div className="xl:col-span-5 rounded-2xl border border-zinc-200 bg-zinc-200/50 p-5 dark:border-zinc-900 dark:bg-zinc-950/40 shadow-sm flex flex-col">
+
+              <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-zinc-300 dark:border-zinc-800">
+                <span className="flex items-center gap-1.5 text-xs font-bold text-zinc-500">
+                  <Eye className="h-4.5 w-4.5" />
+                  Interactive Document Preview
+                </span>
+              </div>
+              <iframe
+                className="flex-1 w-full h-[620px] border border-zinc-300 dark:border-zinc-700 rounded-xl"
+                srcDoc={generateHTMLTemplate()}
+                title="Resume PDF Preview"
+              />
+            </div>
+
+            {/* Panel 3: Export & AI Sidebar (span 3) */}
+            <div className="xl:col-span-3 rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900 shadow-sm flex flex-col h-fit space-y-6">
 
               {/* Download Actions */}
               <div className="space-y-3">
@@ -910,9 +891,10 @@ export const ResumeBuilder: React.FC = () => {
             </div>
 
           </div>
-
-        </div>
+        )}
 
       </div>
+
+    </div>
   );
 };

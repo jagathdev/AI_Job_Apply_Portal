@@ -4,11 +4,12 @@ import { useApp } from '../../context/AppContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Briefcase, FileText, Sparkles, CheckCircle, 
-  Menu, X, Sun, Moon, LogOut, User, Settings, ShieldAlert
+  Menu, X, Sun, Moon, LogOut, User, Settings, ShieldAlert,
+  Building, Home as HomeIcon
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
-  const { user, logoutUser, theme, toggleTheme } = useApp();
+  const { user, logoutUser, theme, toggleTheme, activeCompany } = useApp();
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -22,7 +23,9 @@ export const Navbar: React.FC = () => {
   const isActive = (path: string) => location.pathname === path;
 
   const authLinks = [
+    { name: 'Home', path: '/home', icon: HomeIcon },
     { name: 'Dashboard', path: '/dashboard', icon: Briefcase },
+    ...(activeCompany ? [{ name: 'Company Details', path: `/company/${activeCompany._id || activeCompany.id}`, icon: Building }] : []),
     { name: 'Resume Builder', path: '/resume-builder', icon: FileText },
     { name: 'ATS Score', path: '/ats-score', icon: CheckCircle },
     { name: 'Interview Prep', path: '/interview-preparation', icon: Sparkles },
@@ -31,16 +34,16 @@ export const Navbar: React.FC = () => {
 
   return (
     <nav className="sticky top-0 z-40 w-full border-b border-zinc-200/80 bg-white/85 backdrop-blur-md dark:border-zinc-800/80 dark:bg-zinc-950/85 text-zinc-900 dark:text-zinc-50 transition-colors duration-300">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[96%] w-full px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           
           {/* Logo */}
           <div className="flex items-center">
-            <Link to={user ? '/dashboard' : '/'} className="flex items-center gap-2 group">
+            <Link to={user ? '/home' : '/'} className="flex items-center gap-2 group shrink-0">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 text-white shadow-md shadow-indigo-500/20 group-hover:scale-105 transition-transform duration-300">
                 <Sparkles className="h-5 w-5" />
               </div>
-              <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-zinc-900 via-indigo-950 to-indigo-600 bg-clip-text text-transparent dark:from-zinc-50 dark:via-zinc-200 dark:to-indigo-400">
+              <span className="text-base lg:text-lg font-bold tracking-tight bg-gradient-to-r from-zinc-900 via-indigo-950 to-indigo-600 bg-clip-text text-transparent dark:from-zinc-50 dark:via-zinc-200 dark:to-indigo-400">
                 Apply<span className="font-medium text-indigo-600 dark:text-indigo-400">AI</span>
               </span>
             </Link>
@@ -48,7 +51,7 @@ export const Navbar: React.FC = () => {
 
           {/* Desktop Links (Authenticated) */}
           {user && (
-            <div className="hidden md:flex items-center space-x-1 lg:space-x-2">
+            <div className="hidden xl:flex items-center space-x-2">
               {authLinks.map((link) => {
                 const Icon = link.icon;
                 return (
@@ -58,7 +61,7 @@ export const Navbar: React.FC = () => {
                     className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
                       isActive(link.path)
                         ? 'bg-zinc-100 dark:bg-zinc-900 text-indigo-600 dark:text-indigo-400'
-                        : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-900/40'
+                        : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-zinc-50/50 dark:hover:bg-zinc-900/40'
                     }`}
                   >
                     <Icon className="h-4 w-4" />
@@ -70,7 +73,7 @@ export const Navbar: React.FC = () => {
           )}
 
           {/* Actions (Theme toggle, auth CTAs) */}
-          <div className="hidden md:flex items-center space-x-3">
+          <div className="hidden xl:flex items-center space-x-3">
             <button
               onClick={toggleTheme}
               className="p-2.5 rounded-xl border border-zinc-200 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900 transition-all duration-200 text-zinc-600 dark:text-zinc-400"
@@ -81,14 +84,14 @@ export const Navbar: React.FC = () => {
 
             {user ? (
               <div className="flex items-center space-x-3">
-                <span className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900">
+                <span className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900 whitespace-nowrap">
                   <User className="h-3 w-3" />
                   {user.subscriptionStatus === 'premium' ? 'Premium' : 'Free Tier'}
                 </span>
                 
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium border border-red-200 dark:border-red-950/50 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all duration-200"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium border border-red-200 dark:border-red-950/50 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all duration-200 whitespace-nowrap"
                 >
                   <LogOut className="h-4 w-4" />
                   Logout
@@ -113,7 +116,7 @@ export const Navbar: React.FC = () => {
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="flex md:hidden items-center space-x-2">
+          <div className="flex xl:hidden items-center space-x-2">
             <button
               onClick={toggleTheme}
               className="p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400"
@@ -139,7 +142,7 @@ export const Navbar: React.FC = () => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 overflow-hidden"
+            className="xl:hidden border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 overflow-hidden"
           >
             <div className="space-y-1.5 px-4 py-4">
               {user ? (
