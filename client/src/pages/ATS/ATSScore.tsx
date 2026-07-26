@@ -70,9 +70,9 @@ export const ATSScore: React.FC = () => {
       <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-zinc-50 dark:bg-zinc-950 p-6 text-center">
         <div className="max-w-md rounded-2xl border border-zinc-200 bg-white p-8 dark:border-zinc-800 dark:bg-zinc-900 space-y-4 shadow-sm">
           <AlertTriangle className="h-10 w-10 text-amber-500 mx-auto animate-bounce" />
-          <h3 className="text-base font-bold">Workspace Incomplete</h3>
-          <p className="text-xs text-zinc-500">
-            You must upload/create at least one **Resume** and complete a **Company Job Description Analysis** before checking your ATS Match scores.
+          <h3 className="text-base font-bold text-zinc-800 dark:text-zinc-200">Upload your reference resume</h3>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            Please upload your reference resume and ensure you have completed a Job Description Analysis first.
           </p>
           <div className="pt-4 flex gap-3 justify-center">
             <a href="/resume-builder" className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold shadow-sm">Resume Builder</a>

@@ -28,6 +28,7 @@ export const Home: React.FC = () => {
   const [jdUrl, setJdUrl] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [loadingStage, setLoadingStage] = useState(0);
+  const [showBlockModal, setShowBlockModal] = useState(false);
 
   const guideRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -80,14 +81,21 @@ export const Home: React.FC = () => {
     const textVal = jdText.trim();
     const urlVal = jdUrl.trim();
 
-    if (!urlVal) {
-      showToast('Please enter a valid job URL.', 'error');
+    if (!urlVal && !textVal) {
+      showToast('Please enter a job URL or paste the job description text.', 'error');
       return;
     }
 
-    body.jdUrl = urlVal;
+    if (urlVal) {
+      body.jdUrl = urlVal;
+    }
 
     if (textVal) {
+      if (textVal.match(/^https?:\/\/[^\s]+$/)) {
+        showToast('You pasted a URL into the description box. Please paste the actual text of the job description here, or use the URL box above.', 'error');
+        return;
+      }
+      
       if (textVal.length < 100) {
         showToast('Please enter a job description of at least 100 characters.', 'error');
         return;
@@ -112,8 +120,9 @@ export const Home: React.FC = () => {
       stopRef.current = true;
       clearInterval(loaderInterval);
       
-      if (err.response?.data?.code === 'SCRAPE_BLOCKED') {
-        showToast('Scraper blocked. Please paste the Job Description text directly.', 'info');
+      const isBlocked = err.response?.data?.code === 'SCRAPE_BLOCKED' || err.response?.status === 400;
+      if (isBlocked) {
+        setShowBlockModal(true);
       } else {
         showToast(err.response?.data?.error || 'AI analysis timed out or failed.', 'error');
       }
@@ -227,7 +236,7 @@ export const Home: React.FC = () => {
             <div className={`flex h-10 w-10 items-center justify-center rounded-xl shrink-0 ${
               isJobAnalyzed 
                 ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400' 
-                : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-650 dark:text-indigo-400'
+                : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400'
             }`}>
               {isJobAnalyzed ? <CheckCircle2 className="h-5 w-5" /> : <Briefcase className="h-5 w-5" />}
             </div>
@@ -236,7 +245,7 @@ export const Home: React.FC = () => {
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <span className={`text-[10px] font-bold uppercase tracking-wider ${
-                    isJobAnalyzed ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-650 dark:text-indigo-400'
+                    isJobAnalyzed ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-600 dark:text-indigo-400'
                   }`}>
                     Step 2: {isJobAnalyzed ? 'Job Analyzed (Completed)' : 'Paste Job Link or Description'}
                   </span>
@@ -297,7 +306,7 @@ export const Home: React.FC = () => {
                   <button
                     type="submit"
                     disabled={isAnalyzing}
-                    className="flex items-center justify-center gap-2 rounded-xl bg-indigo-650 hover:bg-indigo-750 text-white px-5 py-2.5 text-xs font-bold transition-all shadow-md shadow-indigo-500/10 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed w-full sm:w-auto"
+                    className="flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 text-xs font-bold transition-all shadow-md shadow-indigo-500/10 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed w-full sm:w-auto"
                   >
                     {isAnalyzing ? (
                       <>
@@ -325,7 +334,7 @@ export const Home: React.FC = () => {
                   >
                     <div className="p-4 rounded-xl border border-indigo-100 bg-indigo-50/50 dark:border-indigo-950/40 dark:bg-indigo-950/10 mt-2 space-y-2">
                       <div className="flex justify-between items-center text-xs font-semibold">
-                        <span className="text-indigo-650 dark:text-indigo-400 flex items-center gap-1.5">
+                        <span className="text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
                           <div className="h-2 w-2 rounded-full bg-indigo-500 animate-ping" />
                           AI Analyst at work...
                         </span>
@@ -354,11 +363,11 @@ export const Home: React.FC = () => {
               ? 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 shadow-sm' 
               : 'opacity-55 bg-zinc-50 dark:bg-zinc-900/10 border-zinc-200 dark:border-zinc-850'
           }`}>
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-650 dark:text-indigo-400 border border-indigo-200/40 shrink-0">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200/40 shrink-0">
               <Layers className="h-5 w-5" />
             </div>
             <div className="space-y-2 flex-1">
-              <span className="text-[10px] font-bold text-indigo-650 dark:text-indigo-400 uppercase tracking-wider block">Step 3: Company Intelligence screen</span>
+              <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider block">Step 3: Company Intelligence screen</span>
               <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Review Company & Tech Details</h3>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 Explore the structured summary panels for company standings, core engineering verticals, work hours layout, and competitors.
@@ -367,7 +376,7 @@ export const Home: React.FC = () => {
                 <div className="pt-2">
                   <Link
                     to={`/company/${activeCompany._id || activeCompany.id}`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-950 text-indigo-650 dark:text-indigo-400 text-xs font-bold transition-all"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-950 text-indigo-600 dark:text-indigo-400 text-xs font-bold transition-all"
                   >
                     View Details & Verticals
                     <ArrowRight className="h-3.5 w-3.5" />
@@ -386,7 +395,7 @@ export const Home: React.FC = () => {
             <div className={`flex h-10 w-10 items-center justify-center rounded-xl shrink-0 ${
               isResumeUploaded 
                 ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400' 
-                : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-650 dark:text-indigo-400'
+                : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400'
             }`}>
               {isResumeUploaded ? <CheckCircle2 className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
             </div>
@@ -394,7 +403,7 @@ export const Home: React.FC = () => {
             <div className="space-y-2 flex-1">
               <div className="flex items-center gap-2">
                 <span className={`text-[10px] font-bold uppercase tracking-wider ${
-                  isResumeUploaded ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-650 dark:text-indigo-400'
+                  isResumeUploaded ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-600 dark:text-indigo-400'
                 }`}>
                   Step 4: {isResumeUploaded ? 'Resume Uploaded (Completed)' : 'Upload or Paste Resume'}
                 </span>
@@ -415,7 +424,7 @@ export const Home: React.FC = () => {
               <div className="pt-2">
                 <Link
                   to="/resume-builder"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-650 hover:bg-indigo-750 text-white text-xs font-bold transition-all shadow-sm"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm"
                 >
                   Manage Resume Workspace
                   <ArrowRight className="h-3.5 w-3.5" />
@@ -435,7 +444,7 @@ export const Home: React.FC = () => {
             <div className={`flex h-10 w-10 items-center justify-center rounded-xl shrink-0 ${
               isResumeUploaded && isJobAnalyzed && isTailored
                 ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400' 
-                : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-650 dark:text-indigo-400'
+                : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400'
             }`}>
               {isResumeUploaded && isJobAnalyzed && isTailored ? <CheckCircle2 className="h-5 w-5" /> : <Sparkles className="h-5 w-5" />}
             </div>
@@ -443,7 +452,7 @@ export const Home: React.FC = () => {
             <div className="space-y-2 flex-1">
               <div className="flex items-center gap-2">
                 <span className={`text-[10px] font-bold uppercase tracking-wider ${
-                  isResumeUploaded && isJobAnalyzed && isTailored ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-650 dark:text-indigo-400'
+                  isResumeUploaded && isJobAnalyzed && isTailored ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-600 dark:text-indigo-400'
                 }`}>
                   Step 5: {isResumeUploaded && isJobAnalyzed && isTailored ? 'Resume Tailored (Completed)' : 'Tailor Resume Bullets'}
                 </span>
@@ -457,7 +466,7 @@ export const Home: React.FC = () => {
                 <div className="pt-2">
                   <Link
                     to="/resume-builder"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-950 text-indigo-650 dark:text-indigo-400 text-xs font-bold transition-all"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-950 text-indigo-600 dark:text-indigo-400 text-xs font-bold transition-all"
                   >
                     Tailor Experience Now
                     <ArrowRight className="h-3.5 w-3.5" />
@@ -473,11 +482,11 @@ export const Home: React.FC = () => {
               ? 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 shadow-sm' 
               : 'opacity-55 bg-zinc-50 dark:bg-zinc-900/10 border-zinc-200 dark:border-zinc-850'
           }`}>
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-650 dark:text-indigo-400 border border-indigo-200/40 shrink-0">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200/40 shrink-0">
               <ShieldCheck className="h-5 w-5" />
             </div>
             <div className="space-y-2 flex-1">
-              <span className="text-[10px] font-bold text-indigo-650 dark:text-indigo-400 uppercase tracking-wider block">Step 6: ATS Compatibility Check</span>
+              <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider block">Step 6: ATS Compatibility Check</span>
               <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Verify ATS Compatibility</h3>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 Run a simulated ATS check to score your resume relevance against the job description and find specific keywords to add.
@@ -486,7 +495,7 @@ export const Home: React.FC = () => {
                 <div className="pt-2">
                   <Link
                     to="/ats-score"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-950 text-indigo-650 dark:text-indigo-400 text-xs font-bold transition-all"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-950 text-indigo-600 dark:text-indigo-400 text-xs font-bold transition-all"
                   >
                     Run ATS Scoring Report
                     <ArrowRight className="h-3.5 w-3.5" />
@@ -502,11 +511,11 @@ export const Home: React.FC = () => {
               ? 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 shadow-sm' 
               : 'opacity-55 bg-zinc-50 dark:bg-zinc-900/10 border-zinc-200 dark:border-zinc-850'
           }`}>
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-650 dark:text-indigo-400 border border-indigo-200/40 shrink-0">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200/40 shrink-0">
               <Trophy className="h-5 w-5" />
             </div>
             <div className="space-y-2 flex-1">
-              <span className="text-[10px] font-bold text-indigo-650 dark:text-indigo-400 uppercase tracking-wider block">Step 7: Interview Prep Guide</span>
+              <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider block">Step 7: Interview Prep Guide</span>
               <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Complete Mock Interview Prep</h3>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 Review the hiring timeline, and practice coding, system design, and culture-fit behavioral questions tailored to this position.
@@ -515,7 +524,7 @@ export const Home: React.FC = () => {
                 <div className="pt-2">
                   <Link
                     to="/interview-preparation"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-950 text-indigo-650 dark:text-indigo-400 text-xs font-bold transition-all"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-950 text-indigo-600 dark:text-indigo-400 text-xs font-bold transition-all"
                   >
                     Open Interview Prep
                     <ArrowRight className="h-3.5 w-3.5" />
@@ -527,6 +536,38 @@ export const Home: React.FC = () => {
 
         </div>
       </div>
+
+      {/* Blocked Scraper Modal */}
+      <AnimatePresence>
+        {showBlockModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-zinc-200 dark:border-zinc-800"
+            >
+              <div className="p-6 space-y-4">
+                <div className="flex items-center gap-3 text-amber-500">
+                  <AlertTriangle className="h-6 w-6" />
+                  <h3 className="text-lg font-black text-zinc-900 dark:text-zinc-50">Webpage Blocked</h3>
+                </div>
+                <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                  This webpage has blocked me, so you can give me a job description, I will analyze it and respond to you. Thank you.
+                </p>
+                <div className="pt-4 flex justify-end">
+                  <button
+                    onClick={() => setShowBlockModal(false)}
+                    className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-all shadow-md shadow-amber-500/20"
+                  >
+                    Got it
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

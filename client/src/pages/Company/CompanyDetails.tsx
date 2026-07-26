@@ -160,31 +160,7 @@ export const CompanyDetails: React.FC = () => {
     );
   }
 
-  const getTechExplanation = (tech: string) => {
-    const t = tech.toLowerCase();
-    if (t.includes('javascript') || t.includes('typescript') || t.includes('python') || t.includes('go') || t.includes('java') || t.includes('c#') || t.includes('php')) {
-      return 'Core development language used to construct application logic and features.';
-    }
-    if (t.includes('react') || t.includes('vue') || t.includes('angular') || t.includes('svelte') || t.includes('next.js')) {
-      return 'Modern frontend library/framework for designing fast, modular, and dynamic user views.';
-    }
-    if (t.includes('node') || t.includes('express') || t.includes('django') || t.includes('spring') || t.includes('nest') || t.includes('laravel')) {
-      return 'Robust server-side framework managing APIs, database operations, and user sessions.';
-    }
-    if (t.includes('sql') || t.includes('postgres') || t.includes('mongo') || t.includes('db') || t.includes('database') || t.includes('redis')) {
-      return 'Secure database engine used to efficiently organize, store, and query transaction logs.';
-    }
-    if (t.includes('html') || t.includes('css') || t.includes('tailwind') || t.includes('sass')) {
-      return 'Essential layout/styling language used to draw responsive, modern graphics and animations.';
-    }
-    if (t.includes('git') || t.includes('github') || t.includes('gitlab')) {
-      return 'Standard version control system essential for tracking code updates and team deployments.';
-    }
-    if (t.includes('docker') || t.includes('aws') || t.includes('kubernetes') || t.includes('ci/cd') || t.includes('cloud')) {
-      return 'Automation infrastructure used to build, containerize, scale, and host live servers.';
-    }
-    return 'Mandatory tool or standard requested to solve target engineering objectives.';
-  };
+
 
   const getBenefitIcon = (ben: string) => {
     const b = ben.toLowerCase();
@@ -296,7 +272,7 @@ export const CompanyDetails: React.FC = () => {
                         Company Overview
                       </h3>
                       <p className="text-xs text-zinc-650 dark:text-zinc-300 leading-relaxed">
-                        {company.companyOverview || 'No description extracted. This company profile is synthesized from JD benchmarks.'}
+                        {company.companyOverview || 'Not explicitly stated in the job description.'}
                       </p>
                     </div>
 
@@ -307,7 +283,7 @@ export const CompanyDetails: React.FC = () => {
                         Industry Standing
                       </h3>
                       <p className="text-xs text-zinc-655 dark:text-zinc-300 leading-relaxed">
-                        {company.glassdoorSummary || 'Extrapolated ratings and comments reflect a highly supportive environment specializing in rapid delivery and code quality benchmarks.'}
+                        {company.glassdoorSummary || 'Not provided in the job description.'}
                       </p>
                     </div>
                   </div>
@@ -322,20 +298,29 @@ export const CompanyDetails: React.FC = () => {
                         HR & Media Contacts
                       </h3>
                       <ul className="space-y-3.5 text-xs">
-                        <li className="flex flex-col gap-1">
-                          <span className="text-zinc-400 dark:text-zinc-500">HR Email ID:</span>
-                          <a href={`mailto:hr@${company.companyName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'company'}.com`} className="font-bold text-indigo-650 dark:text-indigo-400 hover:underline flex items-center gap-1">
-                            <Mail className="h-3.5 w-3.5 shrink-0" />
-                            hr@{company.companyName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'company'}.com
-                          </a>
-                        </li>
-                        <li className="flex flex-col gap-1">
-                          <span className="text-zinc-400 dark:text-zinc-500">HR Mobile Number:</span>
-                          <a href="tel:+919876543210" className="font-bold text-zinc-700 dark:text-zinc-300 hover:underline flex items-center gap-1">
-                            <Phone className="h-3.5 w-3.5 shrink-0" />
-                            +91 98765 43210
-                          </a>
-                        </li>
+                        {company.hrEmail && (
+                          <li className="flex flex-col gap-1">
+                            <span className="text-zinc-400 dark:text-zinc-500">HR Email ID:</span>
+                            <a href={`mailto:${company.hrEmail}`} className="font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1">
+                              <Mail className="h-3.5 w-3.5 shrink-0" />
+                              {company.hrEmail}
+                            </a>
+                          </li>
+                        )}
+                        {company.hrMobile && (
+                          <li className="flex flex-col gap-1">
+                            <span className="text-zinc-400 dark:text-zinc-500">HR Mobile Number:</span>
+                            <a href={`tel:${company.hrMobile}`} className="font-bold text-zinc-700 dark:text-zinc-300 hover:underline flex items-center gap-1">
+                              <Phone className="h-3.5 w-3.5 shrink-0" />
+                              {company.hrMobile}
+                            </a>
+                          </li>
+                        )}
+                        {!company.hrEmail && !company.hrMobile && (
+                          <li className="text-xs text-zinc-500 dark:text-zinc-400 italic">
+                            No direct HR contacts provided in the job description.
+                          </li>
+                        )}
                       </ul>
                     </div>
 
@@ -365,51 +350,7 @@ export const CompanyDetails: React.FC = () => {
                 </div>
               </div>
 
-              {/* Middle Row: Workplace Environment Scorecard taking full section (100% width) */}
-              <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 shadow-sm space-y-4">
-                <h3 className="text-base font-bold flex items-center gap-2 text-zinc-800 dark:text-zinc-100">
-                  <Award className="h-5 w-5 text-indigo-500" />
-                  Workplace Environment Scorecard
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-1">
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between text-xs font-semibold">
-                      <span className="text-zinc-500 dark:text-zinc-400">Developer Autonomy</span>
-                      <span className="text-indigo-650 dark:text-indigo-400">92%</span>
-                    </div>
-                    <div className="h-2 w-full bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" style={{ width: '92%' }}></div>
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between text-xs font-semibold">
-                      <span className="text-zinc-500 dark:text-zinc-400">Growth Potential</span>
-                      <span className="text-indigo-650 dark:text-indigo-400">88%</span>
-                    </div>
-                    <div className="h-2 w-full bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" style={{ width: '88%' }}></div>
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between text-xs font-semibold">
-                      <span className="text-zinc-500 dark:text-zinc-400">Workplace Stability</span>
-                      <span className="text-indigo-650 dark:text-indigo-400">85%</span>
-                    </div>
-                    <div className="h-2 w-full bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" style={{ width: '85%' }}></div>
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between text-xs font-semibold">
-                      <span className="text-zinc-500 dark:text-zinc-400">Mentorship & Onboarding</span>
-                      <span className="text-indigo-650 dark:text-indigo-400">90%</span>
-                    </div>
-                    <div className="h-2 w-full bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" style={{ width: '90%' }}></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+
 
               {/* Bottom Row: Core Metadata and Competitors side-by-side (50% and 50% width) */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
@@ -449,6 +390,9 @@ export const CompanyDetails: React.FC = () => {
                       Major business and product category competitors in this vertical:
                     </p>
                     <div className="flex flex-wrap gap-2 pt-1">
+                      {(!company.competitors || company.competitors.length === 0) && (
+                        <span className="text-xs text-zinc-500 dark:text-zinc-400 italic">None explicitly listed.</span>
+                      )}
                       {company.competitors?.map((comp: string, i: number) => (
                         <span key={i} className="text-xs font-bold px-3.5 py-2 rounded-xl bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border border-zinc-200/40 dark:border-zinc-700/40 shadow-sm transition-all hover:bg-indigo-50/50 hover:text-indigo-600 hover:border-indigo-200/50 dark:hover:!bg-indigo-950/30 dark:hover:!text-indigo-400 dark:hover:!border-indigo-900/40 cursor-default">
                           {comp}
@@ -500,7 +444,7 @@ export const CompanyDetails: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
                   {company.techStack?.map((tech: any, i: number) => {
                     const techName = typeof tech === 'string' ? tech : (tech?.name || 'Technology');
-                    const techExpl = typeof tech === 'string' ? getTechExplanation(tech) : (tech?.explanation || 'Core system capability.');
+                    const techExpl = typeof tech === 'string' ? '' : (tech?.explanation || '');
                     return (
                       <div key={i} className="p-3.5 rounded-xl border border-zinc-150 bg-zinc-50/50 dark:border-zinc-800 dark:bg-zinc-950/20 flex flex-col justify-between gap-3 group hover:border-indigo-500/50 transition-all">
                         <div className="space-y-1">
@@ -508,9 +452,11 @@ export const CompanyDetails: React.FC = () => {
                             <Zap className="h-3.5 w-3.5 text-amber-500 shrink-0" />
                             {techName}
                           </span>
-                          <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
-                            {techExpl}
-                          </p>
+                          {techExpl && (
+                            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
+                              {techExpl}
+                            </p>
+                          )}
                         </div>
                         <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800/60 flex justify-between items-center">
                           <span className="text-[9px] font-black tracking-wide uppercase px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-650 dark:text-indigo-400 whitespace-nowrap">
@@ -541,9 +487,6 @@ export const CompanyDetails: React.FC = () => {
                       </span>
                       <div>
                         <h4 className="font-bold text-zinc-900 dark:text-zinc-100 text-xs">{prod}</h4>
-                        <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed mt-1">
-                          Core technical platform/vertical targeted for active deployment, continuous enhancement, and architectural refinement.
-                        </p>
                       </div>
                     </div>
                   ))}
@@ -574,16 +517,9 @@ export const CompanyDetails: React.FC = () => {
                       </div>
 
                       <div>
-                        <h4 className="font-bold text-zinc-900 dark:text-zinc-100 text-xs">
-                          {proj.split('for the')[0] || `Key Engineering Initiative ${i + 1}`}
-                        </h4>
-                        <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed mt-2.5 font-medium">
+                        <h4 className="font-bold text-zinc-900 dark:text-zinc-100 text-xs mt-2.5">
                           {proj}
-                        </p>
-                      </div>
-
-                      <div className="pt-3.5 text-[10px] text-zinc-400 border-t border-zinc-200/50 dark:border-zinc-800/40">
-                        <span>Scope: Scale & Maintainability</span>
+                        </h4>
                       </div>
                     </div>
                   ))}
@@ -632,7 +568,7 @@ export const CompanyDetails: React.FC = () => {
                         Culture & Work Values
                       </h3>
                       <p className="text-xs text-zinc-650 dark:text-zinc-300 leading-relaxed">
-                        {company.workCulture || 'Synthesized records describe a highly decentralized layout utilizing high developer autonomy, flexible core hours, and robust peer mentorship structures.'}
+                        {company.workCulture || 'Not explicitly provided.'}
                       </p>
                     </div>
 
@@ -643,7 +579,7 @@ export const CompanyDetails: React.FC = () => {
                         Career Growth Outlook
                       </h3>
                       <p className="text-xs text-zinc-650 dark:text-zinc-300 leading-relaxed">
-                        {company.careerGrowth || 'Strong career architecture with biannual reviews. High internal mobility with active training sessions for lead and architectural coordinates.'}
+                        {company.careerGrowth || 'Not explicitly provided.'}
                       </p>
                     </div>
                   </div>
@@ -656,18 +592,10 @@ export const CompanyDetails: React.FC = () => {
                       <Clock className="h-4.5 w-4.5 text-zinc-500" />
                       Hours & Working Setup
                     </h3>
-                    <div className="flex-grow flex flex-col justify-between mt-4 gap-4 text-xs">
+                    <div className="flex-grow flex flex-col mt-4 gap-4 text-xs">
                       <div className="p-3.5 rounded-xl border border-zinc-150 bg-zinc-50/50 dark:border-zinc-800 dark:bg-zinc-950/20 flex-grow flex flex-col justify-center">
                         <span className="text-zinc-400 dark:text-zinc-500 font-semibold block mb-1">Standard Work Hours:</span>
-                        <span className="font-bold text-zinc-800 dark:text-zinc-200">{company.workingHours || 'Standard 9 AM - 6 PM office hours'}</span>
-                      </div>
-                      <div className="p-3.5 rounded-xl border border-zinc-150 bg-zinc-50/50 dark:border-zinc-800 dark:bg-zinc-950/20 flex-grow flex flex-col justify-center">
-                        <span className="text-zinc-400 dark:text-zinc-500 font-semibold block mb-1">Collaboration Window:</span>
-                        <span className="font-bold text-zinc-800 dark:text-zinc-200">10:00 AM – 4:00 PM (Core Hours)</span>
-                      </div>
-                      <div className="p-3.5 rounded-xl border border-zinc-150 bg-zinc-50/50 dark:border-zinc-800 dark:bg-zinc-950/20 flex-grow flex flex-col justify-center">
-                        <span className="text-zinc-400 dark:text-zinc-500 font-semibold block mb-1">Workplace Flexibility:</span>
-                        <span className="font-bold text-zinc-800 dark:text-zinc-200 leading-relaxed">Hybrid / Flex shifts supported. High trust, task-oriented delivery models without rigid micromanagement.</span>
+                        <span className="font-bold text-zinc-800 dark:text-zinc-200">{company.workingHours || 'Not specified'}</span>
                       </div>
                     </div>
                   </div>
@@ -802,12 +730,8 @@ export const CompanyDetails: React.FC = () => {
                           Hiring Trend Details
                         </h3>
                         <p className="text-xs text-zinc-655 dark:text-zinc-300 leading-normal font-medium mt-3.5">
-                          {company.hiringTrends || 'Actively seeking engineering profiles to support global expansions.'}
+                          {company.hiringTrends || 'Not explicitly stated.'}
                         </p>
-                      </div>
-                      <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800/60 text-[10px] text-zinc-400 dark:text-zinc-500 mt-4 flex justify-between">
-                        <span>Source: AI Benchmark</span>
-                        <span>Verified Match</span>
                       </div>
                     </div>
                   </div>
@@ -821,18 +745,13 @@ export const CompanyDetails: React.FC = () => {
                   Preparation & Expectations Checklist
                 </h3>
                 <p className="text-xs text-zinc-650 dark:text-zinc-300 leading-relaxed font-medium">
-                  {company.interviewExpectations || 'Interview focuses heavily on scalable systems, code quality benchmarks, testing paradigms, and alignment on team-wide code reviews.'}
+                  {company.interviewExpectations || 'Not explicitly stated.'}
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4.5 pt-2 text-xs">
-                  {(company.interviewChecklist && company.interviewChecklist.length > 0
-                    ? company.interviewChecklist
-                    : [
-                        "Focus on core JavaScript/TypeScript systems & clean code principles.",
-                        "Be ready to explain project architecture & system designs in detail.",
-                        "Explain achievements with quantifiable impact metrics.",
-                        "Align practice scenarios to the STAR method for behavioral reviews."
-                      ]
-                  ).map((item: string, i: number) => (
+                  {(!company.interviewChecklist || company.interviewChecklist.length === 0) && (
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400 italic">No specific interview checklist provided.</span>
+                  )}
+                  {company.interviewChecklist?.map((item: string, i: number) => (
                     <div key={i} className="flex items-center gap-3 p-3.5 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 text-emerald-800 dark:text-emerald-400 font-semibold shadow-sm">
                       <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
                       <span>{item}</span>

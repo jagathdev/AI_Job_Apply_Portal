@@ -46,7 +46,15 @@ const CompanySchema = new Schema({
   industry: { type: String, default: 'Technology' },
   competitors: { type: [String], default: [] },
   hiringTrends: { type: String, default: '' },
+  scorecard: {
+    developerAutonomy: { type: Number, default: null },
+    growthPotential: { type: Number, default: null },
+    workplaceStability: { type: Number, default: null },
+    mentorshipOnboarding: { type: Number, default: null }
+  },
   importantNotes: { type: String, default: '' },
+  hrEmail: { type: String, default: '' },
+  hrMobile: { type: String, default: '' },
   createdAt: { type: Date, default: Date.now }
 });
 

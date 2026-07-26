@@ -7,40 +7,46 @@ import { AuthRequest } from '../middlewares/auth';
 // Simple best-effort HTML scraper
 async function scrapeJobURL(url: string): Promise<string> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 6000); // 6s timeout for scrape
+  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout for scrape
 
   try {
-    const res = await fetch(url, {
+    // Use Jina Reader API to bypass common bot protections and extract clean content
+    const jinaUrl = `https://r.jina.ai/${url}`;
+    let res = await fetch(jinaUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept': 'text/plain',
       },
       signal: controller.signal,
     });
 
+    if (!res.ok) {
+      console.warn(`Jina API failed (HTTP ${res.status}). Attempting direct fetch fallback for ${url}...`);
+      res = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5',
+        },
+        signal: controller.signal,
+      });
+      if (!res.ok) {
+        throw new Error(`Failed to access link (HTTP ${res.status}).`);
+      }
+    }
+
+    let text = await res.text();
+
     clearTimeout(timeoutId);
 
-    if (!res.ok) {
-      throw new Error(`Failed to access link (HTTP ${res.status}).`);
+    // Limit text size to avoid token limit issues
+    if (text.length > 20000) {
+      text = text.substring(0, 20000);
     }
 
-    const html = await res.text();
-
-    // Simple HTML-to-text conversion: strip styles, scripts, and tags
-    let text = html
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-
-    // Limit text size
-    if (text.length > 10000) {
-      text = text.substring(0, 10000);
-    }
-
-    if (text.length < 150) {
-      throw new Error('Scraped content is too short or empty. May be protected.');
+    // Let the AI decide if the content is valid, even if it's short (e.g. captcha/block page)
+    if (!text || text.trim() === '') {
+      throw new Error('Scraped content is empty.');
     }
 
     return text;
@@ -64,18 +70,17 @@ export const analyzeJobDescription = async (req: AuthRequest, res: Response) => 
   if (jdUrl && !jdText) {
     try {
       console.log(`Starting best-effort scrape of: ${jdUrl}`);
-      finalJdText = await scrapeJobURL(jdUrl);
+      const scrapedText = await scrapeJobURL(jdUrl);
+      finalJdText = `Job URL: ${jdUrl}\n\nScraped Content:\n${scrapedText}`;
     } catch (scrapeError: any) {
       console.warn('Scraper failed or blocked:', scrapeError);
-      return res.status(422).json({
-        error: 'Unable to auto-fetch job details from this link due to privacy shields or anti-bot rules. Please copy and paste the Job Description text directly instead.',
-        code: 'SCRAPE_BLOCKED',
-      });
+      // Fallback: If scraper fails completely, instruct AI to infer from URL slug
+      finalJdText = `Job URL: ${jdUrl}\n\n(Note: The website blocked the scraper. Please infer all possible job details purely from the URL slug provided above. Do your best to guess the title, company, location, and requirements based on the URL.)`;
     }
   }
 
-  if (!finalJdText || finalJdText.trim().length < 100) {
-    return res.status(400).json({ error: 'Job description must be at least 100 characters long.' });
+  if (!finalJdText || finalJdText.trim().length < 10) {
+    return res.status(400).json({ error: 'Job description text or URL is required.' });
   }
 
   // Deduplication Check
@@ -97,11 +102,24 @@ export const analyzeJobDescription = async (req: AuthRequest, res: Response) => 
 
   const analysis = await analyzeCompanyJD(finalJdText, customApiKeys);
 
+  const isUnknown = (str: string) => !str || /^(unknown|n\/a|not provided|not specified)/i.test(str.trim());
+
+  if (analysis.isJobDescription === false || isUnknown(analysis.companyName) || isUnknown(analysis.jobTitle)) {
+    return res.status(400).json({
+      error: 'The provided link or text does not appear to be a valid job post. Please try a different link or paste the text directly.'
+    });
+  }
+
+  const companyName = analysis.companyName;
+  const jobTitle = analysis.jobTitle;
+
   // Save Company/JD Analysis to MongoDB
   const savedCompany = await Company.create({
     userId,
     jdHash,
     ...analysis,
+    companyName,
+    jobTitle,
   });
 
   return res.status(201).json({

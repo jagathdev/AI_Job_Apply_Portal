@@ -1,6 +1,7 @@
 import { callAI, CustomApiKeys } from './grokService';
 
 export interface CompanyAnalysisResult {
+  isJobDescription: boolean;
   companyName: string;
   jobTitle: string;
   department: string;
@@ -29,6 +30,14 @@ export interface CompanyAnalysisResult {
   competitors: string[];
   hiringTrends: string;
   importantNotes: string;
+  hrEmail: string;
+  hrMobile: string;
+  scorecard: {
+    developerAutonomy: number;
+    growthPotential: number;
+    workplaceStability: number;
+    mentorshipOnboarding: number;
+  };
 }
 
 export async function analyzeCompanyJD(
@@ -37,10 +46,14 @@ export async function analyzeCompanyJD(
 ): Promise<CompanyAnalysisResult> {
   const systemPrompt = `You are an expert AI recruiter and corporate intelligence analyst.
 Analyze the following Job Description (JD) text and extract detailed company/role information.
+First, determine if the provided text is actually a job description or a valid job URL. If the text explicitly asks you to infer from a URL slug, DO YOUR BEST to infer the job details from the URL slug itself (like company name, role, tech stack) and set "isJobDescription" to true. Only set "isJobDescription" to false if it is completely random text with no job-related context or URLs.
+CRITICAL: Do NOT hallucinate or fake HR email IDs or mobile numbers. Only include them if they are explicitly stated in the job description text. If they are not found, you MUST return an empty string "". Do not generate dummy emails like "hr@company.com".
+For the "scorecard" object, analyze the text and estimate a score from 0 to 100 for developerAutonomy, growthPotential, workplaceStability, and mentorshipOnboarding based on the tone, language, and benefits mentioned in the text.
 You must return your response STRICTLY as a JSON object matching this EXACT structure. If any field is not present in the text, you must use your extensive industry knowledge to estimate or infer realistic values based on the company or industry, but clearly mark those inferred fields or keep them highly aligned with reality.
 
 Structure to return:
 {
+  "isJobDescription": true,
   "companyName": "Name of the company",
   "jobTitle": "Job Title",
   "department": "Department (e.g. Engineering, Product, Sales)",
@@ -80,7 +93,15 @@ Structure to return:
   "industry": "Industry category",
   "competitors": ["Competitor A", "Competitor B"],
   "hiringTrends": "Hiring status or trends for this company",
-  "importantNotes": "Any critical tips, red flags, or advice for the applicant"
+  "importantNotes": "Any critical tips, red flags, or advice for the applicant",
+  "hrEmail": "Extracted HR email ID if explicitly present, otherwise empty string",
+  "hrMobile": "Extracted HR mobile number if explicitly present, otherwise empty string",
+  "scorecard": {
+    "developerAutonomy": 85,
+    "growthPotential": 90,
+    "workplaceStability": 80,
+    "mentorshipOnboarding": 95
+  }
 }`;
 
   const userPrompt = `Job Description Text to analyze:\n\n${jobDescriptionText}`;

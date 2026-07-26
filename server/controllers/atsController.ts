@@ -22,7 +22,11 @@ export const createATSReport = async (req: AuthRequest, res: Response) => {
     if (company) {
       companyName = company.companyName;
       jobTitle = company.jobTitle;
-      jobDescriptionText = `Company: ${company.companyName}\nRole: ${company.jobTitle}\nOverview: ${company.companyOverview}\nRequired Skills: ${company.requiredSkills.join(', ')}\nTech Stack: ${company.techStack.join(', ')}`;
+      
+      const skillsStr = company.requiredSkills?.join(', ') || '';
+      const techStr = company.techStack?.map((t: any) => typeof t === 'string' ? t : t?.name).filter(Boolean).join(', ') || '';
+      
+      jobDescriptionText = `Company: ${company.companyName}\nRole: ${company.jobTitle}\nOverview: ${company.companyOverview}\nRequired Skills: ${skillsStr}\nTech Stack: ${techStr}`;
     }
   } else if (customJdText) {
     jobDescriptionText = customJdText;
