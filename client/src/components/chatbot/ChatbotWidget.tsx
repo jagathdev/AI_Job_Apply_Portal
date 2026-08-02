@@ -134,7 +134,7 @@ export const ChatbotWidget: React.FC = () => {
                 </div>
                 <div>
                   <h4 className="text-sm font-semibold tracking-tight">AI Search Buddy</h4>
-                  <p className="text-[10px] text-indigo-200">Grok 2.0 • Context Grounded</p>
+                  <p className="text-[10px] text-indigo-200">AI Assistant • Context Grounded</p>
                 </div>
               </div>
               <div className="flex items-center space-x-1.5 text-indigo-300">

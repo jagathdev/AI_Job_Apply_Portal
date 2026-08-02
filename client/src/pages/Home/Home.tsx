@@ -12,23 +12,23 @@ import {
 } from 'lucide-react';
 
 export const Home: React.FC = () => {
-  const { 
-    user, 
-    refreshDashboardStats, 
-    dashboardStats, 
-    activeResume, 
+  const {
+    user,
+    refreshDashboardStats,
+    dashboardStats,
+    activeResume,
     setActiveResume,
-    activeCompany, 
-    setActiveCompany, 
-    showToast 
+    activeCompany,
+    setActiveCompany,
+    showToast
   } = useApp();
 
   const [loading, setLoading] = useState(true);
-  const [jdText, setJdText] = useState('');
-  const [jdUrl, setJdUrl] = useState('');
+  const [jobInput, setJobInput] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [loadingStage, setLoadingStage] = useState(0);
   const [showBlockModal, setShowBlockModal] = useState(false);
+  const [fallbackRole, setFallbackRole] = useState('');
 
   const guideRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -48,7 +48,7 @@ export const Home: React.FC = () => {
   const loadStatsAndContext = async () => {
     setLoading(true);
     await refreshDashboardStats();
-    
+
     // Attempt to pull latest resume from DB if context cache is empty
     try {
       const res = await axios.get('/api/resume/all');
@@ -58,7 +58,17 @@ export const Home: React.FC = () => {
     } catch (err) {
       console.error('Failed to pre-fetch resumes:', err);
     }
-    
+
+    // Attempt to pull latest analyzed company/job from DB if context cache is empty
+    try {
+      const companyRes = await axios.get('/api/company/all');
+      if (companyRes.data.length > 0 && !activeCompany) {
+        setActiveCompany(companyRes.data[0]);
+      }
+    } catch (err) {
+      console.error('Failed to pre-fetch companies:', err);
+    }
+
     setLoading(false);
   };
 
@@ -74,33 +84,25 @@ export const Home: React.FC = () => {
     return interval;
   };
 
-  const handleAnalyze = async (e: React.FormEvent) => {
+  const handleAnalyze = async (e: React.FormEvent, overrideInput?: string) => {
     e.preventDefault();
-    
-    const body: any = {};
-    const textVal = jdText.trim();
-    const urlVal = jdUrl.trim();
 
-    if (!urlVal && !textVal) {
+    const body: any = {};
+    const inputVal = (overrideInput || jobInput).trim();
+
+    if (!inputVal) {
       showToast('Please enter a job URL or paste the job description text.', 'error');
       return;
     }
 
-    if (urlVal) {
-      body.jdUrl = urlVal;
-    }
-
-    if (textVal) {
-      if (textVal.match(/^https?:\/\/[^\s]+$/)) {
-        showToast('You pasted a URL into the description box. Please paste the actual text of the job description here, or use the URL box above.', 'error');
-        return;
-      }
-      
-      if (textVal.length < 100) {
+    if (inputVal.match(/^https?:\/\/[^\s]+$/)) {
+      body.jdUrl = inputVal;
+    } else {
+      if (inputVal.length < 100) {
         showToast('Please enter a job description of at least 100 characters.', 'error');
         return;
       }
-      body.jdText = textVal;
+      body.jdText = inputVal;
     }
 
     setIsAnalyzing(true);
@@ -111,7 +113,7 @@ export const Home: React.FC = () => {
       const res = await axios.post('/api/company/analyze', body);
       stopRef.current = true;
       clearInterval(loaderInterval);
-      
+
       setActiveCompany(res.data.company);
       showToast('AI Job Analysis completed successfully!', 'success');
       await refreshDashboardStats();
@@ -119,9 +121,11 @@ export const Home: React.FC = () => {
     } catch (err: any) {
       stopRef.current = true;
       clearInterval(loaderInterval);
-      
-      const isBlocked = err.response?.data?.code === 'SCRAPE_BLOCKED' || err.response?.status === 400;
-      if (isBlocked) {
+
+      const isUrlRequest = !!body.jdUrl;
+      const isBlocked = err.response?.data?.code === 'SCRAPE_BLOCKED' || (isUrlRequest && err.response?.status === 400);
+
+      if (isBlocked && isUrlRequest) {
         setShowBlockModal(true);
       } else {
         showToast(err.response?.data?.error || 'AI analysis timed out or failed.', 'error');
@@ -153,13 +157,13 @@ export const Home: React.FC = () => {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 transition-colors duration-300">
-      
+
       {/* HERO BANNER */}
       <div className="relative overflow-hidden bg-gradient-to-br from-indigo-950 via-slate-900 to-zinc-950 py-16 md:py-24 text-white">
-        
+
         {/* Subtle grid pattern background */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
-        
+
         {/* Colorful blur spots */}
         <div className="absolute -top-40 -left-40 h-96 w-96 rounded-full bg-indigo-500/10 blur-[120px] pointer-events-none" />
         <div className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full bg-purple-500/15 blur-[120px] pointer-events-none" />
@@ -178,7 +182,7 @@ export const Home: React.FC = () => {
             Accelerate Your Job Application Journey
           </h1>
           <p className="text-xs sm:text-sm md:text-base text-zinc-300 max-w-2xl mx-auto leading-relaxed text-balance">
-            Our AI-guided suite helps you analyze company cultures, tailor resume experience bullets utilizing Grok AI, and prepare custom mock interviews. Follow the checklist below to land your role.
+            Our AI-guided suite helps you analyze company cultures, tailor resume experience bullets utilizing AI, and prepare custom mock interviews. Follow the checklist below to land your role.
           </p>
 
           <div className="pt-4 flex justify-center">
@@ -195,7 +199,7 @@ export const Home: React.FC = () => {
 
       {/* Main Container */}
       <div ref={guideRef} className="mx-auto max-w-6xl px-4 py-12 md:py-16 space-y-12">
-        
+
         {/* Section Header */}
         <div className="text-center space-y-2">
           <h2 className="text-2xl font-black tracking-tight">AI Job Apply Pipeline Guide</h2>
@@ -206,11 +210,11 @@ export const Home: React.FC = () => {
 
         {/* PIPELINE INTERACTIVE MAP */}
         <div className="space-y-6 max-w-4xl mx-auto">
-          
+
           {/* STEP 1: AUTHENTICATION */}
           <div className="flex flex-col sm:flex-row gap-4 p-5 rounded-2xl border border-emerald-200/50 bg-emerald-500/5 dark:border-emerald-950/40 dark:bg-emerald-950/5 relative overflow-hidden">
             <div className="absolute top-0 right-0 h-24 w-24 bg-emerald-500/5 rounded-full translate-x-8 -translate-y-8" />
-            
+
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 border border-emerald-200/40 shrink-0">
               <CheckCircle2 className="h-5 w-5" />
             </div>
@@ -228,25 +232,22 @@ export const Home: React.FC = () => {
           </div>
 
           {/* STEP 2: JD ANALYSIS */}
-          <div className={`flex flex-col sm:flex-row gap-4 p-5 rounded-2xl border transition-all ${
-            isJobAnalyzed 
-              ? 'border-emerald-200 bg-emerald-500/5 dark:border-emerald-950/40 dark:bg-emerald-950/5' 
-              : 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 shadow-sm'
-          }`}>
-            <div className={`flex h-10 w-10 items-center justify-center rounded-xl shrink-0 ${
-              isJobAnalyzed 
-                ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400' 
-                : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400'
+          <div className={`flex flex-col sm:flex-row gap-4 p-5 rounded-2xl border transition-all ${isJobAnalyzed
+            ? 'border-emerald-200 bg-emerald-500/5 dark:border-emerald-950/40 dark:bg-emerald-950/5'
+            : 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 shadow-sm'
             }`}>
+            <div className={`flex h-10 w-10 items-center justify-center rounded-xl shrink-0 ${isJobAnalyzed
+              ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400'
+              : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400'
+              }`}>
               {isJobAnalyzed ? <CheckCircle2 className="h-5 w-5" /> : <Briefcase className="h-5 w-5" />}
             </div>
 
             <div className="space-y-4 flex-1">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className={`text-[10px] font-bold uppercase tracking-wider ${
-                    isJobAnalyzed ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-600 dark:text-indigo-400'
-                  }`}>
+                  <span className={`text-[10px] font-bold uppercase tracking-wider ${isJobAnalyzed ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-600 dark:text-indigo-400'
+                    }`}>
                     Step 2: {isJobAnalyzed ? 'Job Analyzed (Completed)' : 'Paste Job Link or Description'}
                   </span>
                   {isJobAnalyzed && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
@@ -265,7 +266,7 @@ export const Home: React.FC = () => {
                     <span className="mx-2 text-zinc-350 dark:text-zinc-600">•</span>
                     <span className="text-zinc-500 dark:text-zinc-400">{activeCompany.jobTitle}</span>
                   </div>
-                  <Link 
+                  <Link
                     to={`/company/${activeCompany._id || activeCompany.id}`}
                     className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 shrink-0"
                   >
@@ -278,25 +279,13 @@ export const Home: React.FC = () => {
               <form onSubmit={handleAnalyze} className="space-y-3.5">
                 <div className="grid grid-cols-1 gap-3.5">
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider block">Job Link / URL</label>
-                    <input
-                      type="url"
-                      placeholder="e.g. https://jobs.lever.co/example-company/software-engineer"
-                      value={jdUrl}
-                      onChange={(e) => setJdUrl(e.target.value)}
-                      disabled={isAnalyzing}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 text-xs shadow-sm focus:border-indigo-500 focus:outline-none transition-all disabled:opacity-50"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider block">Job Description Text (Optional fallback if link fails)</label>
+                    <label className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider block">Job Link or Description Text</label>
                     <textarea
-                      placeholder="Paste the full job description text here..."
-                      value={jdText}
-                      onChange={(e) => setJdText(e.target.value)}
+                      placeholder="Paste a job link (e.g., https://jobs.lever.co/...) OR paste the full job description text here..."
+                      value={jobInput}
+                      onChange={(e) => setJobInput(e.target.value)}
                       disabled={isAnalyzing}
-                      rows={4}
+                      rows={5}
                       className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 text-xs shadow-sm focus:border-indigo-500 focus:outline-none transition-all disabled:opacity-50 resize-y"
                     />
                   </div>
@@ -326,7 +315,7 @@ export const Home: React.FC = () => {
               {/* Progress feedback when analyzing */}
               <AnimatePresence>
                 {isAnalyzing && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
@@ -344,7 +333,7 @@ export const Home: React.FC = () => {
                         "{loadingStages[loadingStage]}"
                       </p>
                       <div className="w-full bg-indigo-100 dark:bg-indigo-950/60 h-1.5 rounded-full overflow-hidden">
-                        <motion.div 
+                        <motion.div
                           className="bg-indigo-600 h-full rounded-full"
                           animate={{ width: `${((loadingStage + 1) / 5) * 100}%` }}
                           transition={{ duration: 0.5 }}
@@ -358,11 +347,10 @@ export const Home: React.FC = () => {
           </div>
 
           {/* STEP 3: COMPANY CULTURE SCREEN */}
-          <div className={`flex flex-col sm:flex-row gap-4 p-5 rounded-2xl border transition-all ${
-            isJobAnalyzed 
-              ? 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 shadow-sm' 
-              : 'opacity-55 bg-zinc-50 dark:bg-zinc-900/10 border-zinc-200 dark:border-zinc-850'
-          }`}>
+          <div className={`flex flex-col sm:flex-row gap-4 p-5 rounded-2xl border transition-all ${isJobAnalyzed
+            ? 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 shadow-sm'
+            : 'opacity-55 bg-zinc-50 dark:bg-zinc-900/10 border-zinc-200 dark:border-zinc-850'
+            }`}>
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200/40 shrink-0">
               <Layers className="h-5 w-5" />
             </div>
@@ -387,24 +375,21 @@ export const Home: React.FC = () => {
           </div>
 
           {/* STEP 4: RESUME BUILDER */}
-          <div className={`flex flex-col sm:flex-row gap-4 p-5 rounded-2xl border transition-all ${
-            isResumeUploaded 
-              ? 'border-emerald-200 bg-emerald-500/5 dark:border-emerald-950/40 dark:bg-emerald-950/5' 
-              : 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 shadow-sm'
-          }`}>
-            <div className={`flex h-10 w-10 items-center justify-center rounded-xl shrink-0 ${
-              isResumeUploaded 
-                ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400' 
-                : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400'
+          <div className={`flex flex-col sm:flex-row gap-4 p-5 rounded-2xl border transition-all ${isResumeUploaded
+            ? 'border-emerald-200 bg-emerald-500/5 dark:border-emerald-950/40 dark:bg-emerald-950/5'
+            : 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 shadow-sm'
             }`}>
+            <div className={`flex h-10 w-10 items-center justify-center rounded-xl shrink-0 ${isResumeUploaded
+              ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400'
+              : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400'
+              }`}>
               {isResumeUploaded ? <CheckCircle2 className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
             </div>
 
             <div className="space-y-2 flex-1">
               <div className="flex items-center gap-2">
-                <span className={`text-[10px] font-bold uppercase tracking-wider ${
-                  isResumeUploaded ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-600 dark:text-indigo-400'
-                }`}>
+                <span className={`text-[10px] font-bold uppercase tracking-wider ${isResumeUploaded ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-600 dark:text-indigo-400'
+                  }`}>
                   Step 4: {isResumeUploaded ? 'Resume Uploaded (Completed)' : 'Upload or Paste Resume'}
                 </span>
                 {isResumeUploaded && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
@@ -413,7 +398,7 @@ export const Home: React.FC = () => {
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 Provide your latest professional resume. The platform will parsing key details and index them for tailored customizations.
               </p>
-              
+
               {isResumeUploaded && (
                 <div className="flex items-center gap-2 bg-zinc-100/50 dark:bg-zinc-800/40 p-2.5 rounded-xl border border-zinc-200/50 dark:border-zinc-800/40 text-xs">
                   <FileText className="h-4 w-4 text-emerald-500 shrink-0" />
@@ -434,26 +419,23 @@ export const Home: React.FC = () => {
           </div>
 
           {/* STEP 5: RESUME TAILORING */}
-          <div className={`flex flex-col sm:flex-row gap-4 p-5 rounded-2xl border transition-all ${
-            isResumeUploaded && isJobAnalyzed && isTailored
-              ? 'border-emerald-200 bg-emerald-500/5 dark:border-emerald-950/40 dark:bg-emerald-950/5' 
-              : isResumeUploaded && isJobAnalyzed
-                ? 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 shadow-sm'
-                : 'opacity-55 bg-zinc-50 dark:bg-zinc-900/10 border-zinc-200 dark:border-zinc-850'
-          }`}>
-            <div className={`flex h-10 w-10 items-center justify-center rounded-xl shrink-0 ${
-              isResumeUploaded && isJobAnalyzed && isTailored
-                ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400' 
-                : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400'
+          <div className={`flex flex-col sm:flex-row gap-4 p-5 rounded-2xl border transition-all ${isResumeUploaded && isJobAnalyzed && isTailored
+            ? 'border-emerald-200 bg-emerald-500/5 dark:border-emerald-950/40 dark:bg-emerald-950/5'
+            : isResumeUploaded && isJobAnalyzed
+              ? 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 shadow-sm'
+              : 'opacity-55 bg-zinc-50 dark:bg-zinc-900/10 border-zinc-200 dark:border-zinc-850'
             }`}>
+            <div className={`flex h-10 w-10 items-center justify-center rounded-xl shrink-0 ${isResumeUploaded && isJobAnalyzed && isTailored
+              ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400'
+              : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400'
+              }`}>
               {isResumeUploaded && isJobAnalyzed && isTailored ? <CheckCircle2 className="h-5 w-5" /> : <Sparkles className="h-5 w-5" />}
             </div>
 
             <div className="space-y-2 flex-1">
               <div className="flex items-center gap-2">
-                <span className={`text-[10px] font-bold uppercase tracking-wider ${
-                  isResumeUploaded && isJobAnalyzed && isTailored ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-600 dark:text-indigo-400'
-                }`}>
+                <span className={`text-[10px] font-bold uppercase tracking-wider ${isResumeUploaded && isJobAnalyzed && isTailored ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-600 dark:text-indigo-400'
+                  }`}>
                   Step 5: {isResumeUploaded && isJobAnalyzed && isTailored ? 'Resume Tailored (Completed)' : 'Tailor Resume Bullets'}
                 </span>
                 {isResumeUploaded && isJobAnalyzed && isTailored && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
@@ -477,11 +459,10 @@ export const Home: React.FC = () => {
           </div>
 
           {/* STEP 6: ATS FIT CARD */}
-          <div className={`flex flex-col sm:flex-row gap-4 p-5 rounded-2xl border transition-all ${
-            isResumeUploaded && isJobAnalyzed 
-              ? 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 shadow-sm' 
-              : 'opacity-55 bg-zinc-50 dark:bg-zinc-900/10 border-zinc-200 dark:border-zinc-850'
-          }`}>
+          <div className={`flex flex-col sm:flex-row gap-4 p-5 rounded-2xl border transition-all ${isResumeUploaded && isJobAnalyzed
+            ? 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 shadow-sm'
+            : 'opacity-55 bg-zinc-50 dark:bg-zinc-900/10 border-zinc-200 dark:border-zinc-850'
+            }`}>
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200/40 shrink-0">
               <ShieldCheck className="h-5 w-5" />
             </div>
@@ -506,11 +487,10 @@ export const Home: React.FC = () => {
           </div>
 
           {/* STEP 7: INTERVIEW PREPARATION */}
-          <div className={`flex flex-col sm:flex-row gap-4 p-5 rounded-2xl border transition-all ${
-            isJobAnalyzed 
-              ? 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 shadow-sm' 
-              : 'opacity-55 bg-zinc-50 dark:bg-zinc-900/10 border-zinc-200 dark:border-zinc-850'
-          }`}>
+          <div className={`flex flex-col sm:flex-row gap-4 p-5 rounded-2xl border transition-all ${isJobAnalyzed
+            ? 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 shadow-sm'
+            : 'opacity-55 bg-zinc-50 dark:bg-zinc-900/10 border-zinc-200 dark:border-zinc-850'
+            }`}>
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200/40 shrink-0">
               <Trophy className="h-5 w-5" />
             </div>
@@ -548,19 +528,51 @@ export const Home: React.FC = () => {
               className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-zinc-200 dark:border-zinc-800"
             >
               <div className="p-6 space-y-4">
-                <div className="flex items-center gap-3 text-amber-500">
-                  <AlertTriangle className="h-6 w-6" />
-                  <h3 className="text-lg font-black text-zinc-900 dark:text-zinc-50">Webpage Blocked</h3>
+                <div className="flex items-center gap-3 text-indigo-500">
+                  <h3 className="text-lg font-black text-zinc-900 dark:text-zinc-50">Role Information Needed</h3>
                 </div>
                 <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
-                  This webpage has blocked me, so you can give me a job description, I will analyze it and respond to you. Thank you.
+                  Please provide the Job Role or Title below so I can analyze this job for you.
                 </p>
-                <div className="pt-4 flex justify-end">
+
+                <input
+                  type="text"
+                  placeholder="e.g. React Developer"
+                  value={fallbackRole}
+                  required
+                  onChange={(e) => setFallbackRole(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950/50 text-sm shadow-sm focus:border-amber-500 focus:outline-none transition-all"
+                />
+
+                <div className="pt-2 flex gap-3 justify-end">
                   <button
-                    onClick={() => setShowBlockModal(false)}
-                    className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-all shadow-md shadow-amber-500/20"
+                    onClick={() => {
+                      setShowBlockModal(false);
+                      setFallbackRole('');
+                    }}
+                    className="px-4 py-2.5 rounded-xl text-zinc-600 dark:text-zinc-400 text-xs font-bold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
                   >
-                    Got it
+                    Cancel
+                  </button>
+                  <button
+                    disabled={fallbackRole.trim().length < 5}
+                    onClick={() => {
+                      if (fallbackRole.trim().length < 5) {
+                        showToast('Please enter a valid role of at least 5 characters.', 'error');
+                        return;
+                      }
+                      setShowBlockModal(false);
+                      const combined = `${jobInput}\n\nRole: ${fallbackRole}`;
+                      setJobInput(combined);
+                      // Slight delay to allow state to update before resubmitting (the user can just click analyze again, but we auto submit)
+                      setTimeout(() => {
+                        const formEvent = { preventDefault: () => { } } as React.FormEvent;
+                        handleAnalyze(formEvent, combined);
+                      }, 100);
+                    }}
+                    className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-all shadow-md shadow-amber-500/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-amber-500"
+                  >
+                    Send to AI
                   </button>
                 </div>
               </div>

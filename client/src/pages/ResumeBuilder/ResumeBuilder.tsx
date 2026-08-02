@@ -3,19 +3,22 @@ import { useApp } from '../../context/AppContext';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import axios from 'axios';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 import {
   Sparkles, FileText, Upload, Brain, Eye, Save, Plus, Trash2,
   Download, CheckCircle, TrendingUp, HelpCircle, Edit, ListCheck, ArrowLeft, ArrowRight, AlertTriangle,
-  RefreshCw, Layers, CheckCircle2, XCircle
+  RefreshCw, Layers, CheckCircle2, XCircle, ZoomIn, ZoomOut
 } from 'lucide-react';
 
 export const ResumeBuilder: React.FC = () => {
   const { showToast, activeResume, setActiveResume, activeCompany, token } = useApp();
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [previewZoom, setPreviewZoom] = useState(1);
   const [activeTab, setActiveTab] = useState<'info' | 'summary' | 'skills' | 'experience' | 'education' | 'projects' | 'achievements'>('info');
   const [editorState, setEditorState] = useState<any>({
-    personalInfo: { fullName: '', email: '', phone: '', location: '', website: '', linkedIn: '', github: '' },
+    personalInfo: { fullName: '', targetRole: '', email: '', phone: '', location: '', website: '', linkedIn: '', github: '' },
     summary: '',
     skills: [],
     experience: [],
@@ -60,7 +63,7 @@ export const ResumeBuilder: React.FC = () => {
   useEffect(() => {
     if (activeResume) {
       setEditorState({
-        personalInfo: activeResume.personalInfo || { fullName: '', email: '', phone: '', location: '', website: '', linkedIn: '' },
+        personalInfo: activeResume.personalInfo || { fullName: '', targetRole: '', email: '', phone: '', location: '', website: '', linkedIn: '', github: '' },
         summary: activeResume.summary || '',
         skills: activeResume.skills || [],
         experience: activeResume.experience || [],
@@ -251,12 +254,12 @@ export const ResumeBuilder: React.FC = () => {
     }
   };
 
-  // Trigger Grok AI tailoring
+  // Trigger AI tailoring
   const handleTailorResume = async () => {
     if (!activeResume) return;
     setIsTailoring(true);
     try {
-      showToast('Tailoring resume experiences with Grok AI...', 'info');
+      showToast('Tailoring resume experiences with AI...', 'info');
       const res = await axios.post('/api/resume/tailor', {
         resumeId: activeResume._id,
         companyId: activeCompany?._id || null,
@@ -387,6 +390,11 @@ export const ResumeBuilder: React.FC = () => {
     }));
   };
 
+  const makeUrl = (url: string) => {
+    if (!url) return '';
+    return url.startsWith('http://') || url.startsWith('https://') ? url : `https://${url}`;
+  };
+
   const generateHTMLTemplate = () => {
     const personal = editorState.personalInfo;
     return `
@@ -398,43 +406,141 @@ export const ResumeBuilder: React.FC = () => {
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     @page { margin: 0; }
-    html { background: #e4e4e7; padding: 20px; min-height: 100vh; }
+    html { background: #e4e4e7; padding: 20px; min-height: 100vh; overflow: auto; }
     body { 
       font-family: 'Inter', system-ui, -apple-system, sans-serif; 
-      color: #334155; 
+      color: #374151; 
       line-height: 1.4; 
-      padding: 35px 45px; 
       margin: 0 auto; 
-      font-size: 11px; 
-      background: #fff; 
-      width: 800px;
-      min-height: 1123px;
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      font-size: 13px;
+      background: transparent;
+      overflow: hidden;
     }
-    .header { margin-bottom: 20px; }
-    h1 { font-size: 28px; font-weight: 800; margin: 0 0 6px 0; color: #0f172a; letter-spacing: -0.5px; }
-    .contact-info { font-size: 10.5px; color: #64748b; font-weight: 500; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
-    .contact-info a { color: #3b82f6; text-decoration: none; }
-    .contact-info .divider { color: #cbd5e1; }
-    h2 { font-size: 13px; font-weight: 700; margin: 16px 0 8px 0; text-transform: uppercase; color: #1e40af; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px; letter-spacing: 0.5px; }
-    p { margin: 6px 0; text-align: justify; color: #475569; }
-    ul { margin: 6px 0 12px 0; padding-left: 18px; color: #475569; }
+    #scale-wrapper {
+      width: 800px;
+      transform-origin: top left;
+    }
+    .page {
+      width: 800px;
+      height: 1123px;
+      background: #fff;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      margin-bottom: 20px;
+      box-sizing: border-box;
+      overflow: hidden;
+      position: relative;
+    }
+    .page-content {
+      padding: 35px 45px;
+      box-sizing: border-box;
+    }
+    @media print {
+      @page { margin: 0; size: A4; }
+      html { background: #fff !important; padding: 0 !important; display: block !important; overflow: visible !important; }
+      body { transform: none !important; zoom: 1 !important; width: 100% !important; margin: 0 !important; }
+      .page { margin-bottom: 0 !important; box-shadow: none !important; border: none !important; page-break-after: always; height: 1123px !important; }
+      .page:last-child { page-break-after: auto; }
+      .page-content { padding: 35px 45px !important; }
+    }
+    .header { margin-bottom: 20px; text-align: center; }
+    h1 { font-size: 32px; font-weight: 800; margin: 0 0 6px 0; color: #111827; letter-spacing: -0.5px; }
+    .contact-info { font-size: 12px; color: #6b7280; font-weight: 500; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: center; }
+    .contact-info a { color: #2563eb; text-decoration: none; }
+    .contact-info .divider { color: #d1d5db; }
+    h2 { font-size: 15px; font-weight: 700; margin: 16px 0 8px 0; text-transform: uppercase; color: #111827; border-bottom: 2px solid #e5e7eb; padding-bottom: 4px; letter-spacing: 0.5px; }
+    p { margin: 6px 0; text-align: justify; color: #374151; }
+    ul { margin: 6px 0 12px 0; padding-left: 18px; color: #374151; }
     li { margin-bottom: 4px; line-height: 1.5; }
+    a { color: #2563eb; text-decoration: none; }
     .section-row { display: flex; justify-content: space-between; margin-bottom: 4px; align-items: flex-start; }
-    .item-title { font-weight: 700; color: #0f172a; font-size: 12px; }
-    .item-subtitle { font-weight: 600; color: #3b82f6; font-size: 11px; margin-left: 6px; }
-    .item-date { font-size: 10px; font-weight: 600; color: #64748b; white-space: nowrap; background: #f8fafc; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0; }
+    .item-title { font-weight: 700; color: #111827; font-size: 14px; }
+    .item-subtitle { font-weight: 700; color: #111827; font-size: 12px; margin-left: 8px; background-color: #f3f4f6; padding: 2px 6px; border-radius: 4px; }
+    .item-date { font-size: 11px; font-weight: 600; color: #6b7280; white-space: nowrap; padding: 2px 0px; }
     .skills-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
-    .skill-tag { background: #eff6ff; color: #1e40af; padding: 3px 8px; border-radius: 6px; font-size: 10.5px; font-weight: 600; border: 1px solid #bfdbfe; }
+    .skill-tag { color: #374151; background: #f3f4f6; padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; }
     .skills-bullet-list { margin: 2px 0 6px 0; padding-left: 18px; }
     .skills-bullet-list li { margin-bottom: 1px; line-height: 1.3; }
-    .tech-stack { font-size: 10px; color: #64748b; margin-top: 2px; font-weight: 500; }
-    .score-badge { font-size: 10px; color: #059669; background: #d1fae5; padding: 2px 6px; border-radius: 4px; font-weight: 600; margin-top: 4px; display: inline-block; }
+    .tech-stack { font-size: 11px; color: #6b7280; margin-top: 2px; font-weight: 500; }
+    .score-badge { font-size: 11px; color: #2563eb; background: #eff6ff; padding: 2px 6px; border-radius: 4px; font-weight: 600; margin-top: 4px; display: inline-block; }
   </style>
+  <script>
+    function paginate() {
+      const wrapper = document.getElementById('scale-wrapper');
+      if (!wrapper) return;
+      const elements = Array.from(wrapper.children).filter(el => {
+        const tag = el.tagName.toLowerCase();
+        return tag !== 'script' && tag !== 'style' && !el.classList.contains('page');
+      });
+      if (elements.length === 0) return;
+      
+      elements.forEach(el => el.remove());
+      
+      let currentPage = createPage();
+      wrapper.appendChild(currentPage);
+      
+      const MAX_CONTENT_HEIGHT = 1123;
+      
+      for (const el of elements) {
+        const contentDiv = currentPage.querySelector('.page-content');
+        contentDiv.appendChild(el);
+        
+        if (contentDiv.offsetHeight > MAX_CONTENT_HEIGHT && contentDiv.children.length > 1) {
+          contentDiv.removeChild(el);
+          
+          let prev = contentDiv.lastElementChild;
+          let movedHeading = null;
+          if (prev && prev.tagName.match(/^H[1-6]$/)) {
+            movedHeading = prev;
+            contentDiv.removeChild(prev);
+          }
+          
+          currentPage = createPage();
+          wrapper.appendChild(currentPage);
+          const newContent = currentPage.querySelector('.page-content');
+          if (movedHeading) newContent.appendChild(movedHeading);
+          newContent.appendChild(el);
+        }
+      }
+    }
+
+    function createPage() {
+      const page = document.createElement('div');
+      page.className = 'page';
+      const content = document.createElement('div');
+      content.className = 'page-content';
+      page.appendChild(content);
+      return page;
+    }
+
+    function adjustScale() {
+      try {
+        paginate();
+        const iframeWidth = window.innerWidth;
+        if (iframeWidth > 0) {
+          const wrapper = document.getElementById('scale-wrapper');
+          if (!wrapper) return;
+          const baseScale = Math.min((iframeWidth - 40) / 800, 1);
+          const scale = baseScale * ${previewZoom};
+          wrapper.style.transform = 'scale(' + scale + ')';
+          
+          const numPages = wrapper.querySelectorAll('.page').length;
+          const totalHeight = numPages * 1143;
+          
+          document.body.style.width = (800 * scale) + 'px';
+          document.body.style.height = (totalHeight * scale) + 'px';
+        }
+      } catch (e) {
+      }
+    }
+    window.addEventListener('resize', adjustScale);
+    window.addEventListener('DOMContentLoaded', adjustScale);
+  </script>
 </head>
 <body>
-  <div class="header">
+  <div id="scale-wrapper">
+    <div class="header">
     <h1>${personal.fullName || 'Candidate Name'}</h1>
+    ${personal.targetRole ? `<div style="font-size: 18px; font-weight: 700; color: #2563eb; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">${personal.targetRole}</div>` : (activeCompany?.jobTitle ? `<div style="font-size: 18px; font-weight: 700; color: #2563eb; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">${activeCompany.jobTitle}</div>` : '')}
     <div class="contact-info">
       ${personal.location ? `<span>${personal.location}</span>` : ''}
       ${personal.location && (personal.phone || personal.email || personal.linkedIn || personal.github || personal.website) ? '<span class="divider">&bull;</span>' : ''}
@@ -442,11 +548,11 @@ export const ResumeBuilder: React.FC = () => {
       ${personal.phone && (personal.email || personal.linkedIn || personal.github || personal.website) ? '<span class="divider">&bull;</span>' : ''}
       ${personal.email ? `<a href="mailto:${personal.email}">${personal.email}</a>` : ''}
       ${personal.email && (personal.linkedIn || personal.github || personal.website) ? '<span class="divider">&bull;</span>' : ''}
-      ${personal.linkedIn ? `<a href="${personal.linkedIn}">${personal.linkedIn.replace(/^https?:\/\//, '').replace(/\/$/, '')}</a>` : ''}
+      ${personal.linkedIn ? `<a href="${makeUrl(personal.linkedIn)}">${personal.linkedIn.replace(/^https?:\/\//, '').replace(/\/$/, '')}</a>` : ''}
       ${personal.linkedIn && (personal.github || personal.website) ? '<span class="divider">&bull;</span>' : ''}
-      ${personal.github ? `<a href="${personal.github}">${personal.github.replace(/^https?:\/\/(www\.)?github\.com\//, '').replace(/\/$/, '')}</a>` : ''}
+      ${personal.github ? `<a href="${makeUrl(personal.github)}">${personal.github.replace(/^https?:\/\/(www\.)?github\.com\//, '').replace(/\/$/, '')}</a>` : ''}
       ${personal.github && personal.website ? '<span class="divider">&bull;</span>' : ''}
-      ${personal.website ? `<a href="${personal.website}">${personal.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}</a>` : ''}
+      ${personal.website ? `<a href="${makeUrl(personal.website)}">${personal.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}</a>` : ''}
     </div>
   </div>
 
@@ -457,8 +563,8 @@ export const ResumeBuilder: React.FC = () => {
 
   ${editorState.skills?.length > 0 ? `
   <h2>Technical Skills</h2>
-  <div class="skills-inline" style="margin-top: 4px; line-height: 1.5;">
-    ${editorState.skills.join(', ')}
+  <div class="skills-list">
+    ${editorState.skills.map((s: string) => `<span class="skill-tag">${s}</span>`).join('')}
   </div>
   ` : ''}
 
@@ -482,7 +588,7 @@ export const ResumeBuilder: React.FC = () => {
   ${editorState.projects.map((proj: any) => `
     <div style="margin-bottom: 12px;">
       <div class="section-row">
-        <div><span class="item-title">${proj.title}</span> ${proj.link ? `<span style="margin-left:6px; font-size:11px"><a href="${proj.link}">Link</a></span>` : ''}</div>
+        <div><span class="item-title">${proj.title}</span> ${proj.link ? `<span style="margin-left:6px; font-size:11px"><a href="${makeUrl(proj.link)}">Live Demo</a></span>` : ''}</div>
       </div>
       ${proj.techStack?.length ? `<div class="tech-stack">Built with: ${proj.techStack.join(', ')}</div>` : ''}
       <ul>
@@ -500,7 +606,7 @@ export const ResumeBuilder: React.FC = () => {
         <div><span class="item-title">${edu.degree}</span> <span class="item-subtitle">${edu.institution}</span></div>
         <div class="item-date">${edu.duration}</div>
       </div>
-      ${edu.details ? `<div class="score-badge">Score: ${edu.details}</div>` : ''}
+      ${edu.details ? `<div class="score-badge">${edu.details.replace(/^Score:\s*/i, '')}</div>` : ''}
     </div>
   `).join('')}
   ` : ''}
@@ -511,6 +617,7 @@ export const ResumeBuilder: React.FC = () => {
     ${editorState.achievements.map((ach: string) => `<li>${ach}</li>`).join('')}
   </ul>
   ` : ''}
+  </div>
 </body>
 </html>
     `;
@@ -518,25 +625,86 @@ export const ResumeBuilder: React.FC = () => {
 
   const handleExportPDF = () => {
     if (!activeResume) return;
+    executePDFExport();
+  };
+
+  const executePDFExport = () => {
+    showToast('Generating PDF file...', 'info');
     const docHtml = generateHTMLTemplate();
     const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.width = '0px';
-    iframe.style.height = '0px';
+    iframe.style.position = 'absolute';
+    iframe.style.width = '800px';
+    iframe.style.height = '1123px';
+    iframe.style.left = '-9999px';
+    iframe.style.top = '0';
+    iframe.style.opacity = '0.01';
+    iframe.style.zIndex = '-9999';
     iframe.style.border = 'none';
     document.body.appendChild(iframe);
 
-    const doc = iframe.contentWindow?.document;
+    const doc = iframe.contentWindow?.document || iframe.contentDocument;
     if (doc) {
       doc.open();
       doc.write(docHtml);
       doc.close();
-      setTimeout(() => {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-        setTimeout(() => document.body.removeChild(iframe), 1000);
-      }, 500);
-      showToast('Preparing PDF. Please click Save in the print dialog.', 'info');
+
+      setTimeout(async () => {
+        const element = doc.getElementById('scale-wrapper');
+        if (!element) return;
+
+        try {
+          const canvas = await html2canvas(element, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#ffffff'
+          });
+
+          const imgData = canvas.toDataURL('image/jpeg', 1.0);
+          const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'in',
+            format: 'a4'
+          });
+
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+          pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+
+          // Make all links clickable in the generated PDF
+          const links = element.querySelectorAll('a');
+          const elementRect = element.getBoundingClientRect();
+
+          links.forEach(link => {
+            const rect = link.getBoundingClientRect();
+            const x = (rect.left - elementRect.left) * (pdfWidth / elementRect.width);
+            const y = (rect.top - elementRect.top) * (pdfHeight / elementRect.height);
+            const w = rect.width * (pdfWidth / elementRect.width);
+            const h = rect.height * (pdfHeight / elementRect.height);
+
+            const url = link.getAttribute('href');
+            if (url) {
+              pdf.link(x, y, w, h, { url });
+            }
+          });
+
+          const roleName = editorState.personalInfo?.targetRole || activeCompany?.jobTitle || '';
+          const candidateName = editorState.personalInfo?.fullName || 'Candidate';
+
+          const nameParts = [candidateName, roleName, 'ATS'].filter(Boolean);
+          const formattedFilename = nameParts.join('_').replace(/[\s\W]+/g, '_');
+
+          pdf.save(`${formattedFilename}.pdf`);
+
+          document.body.removeChild(iframe);
+          showToast('Resume downloaded successfully!', 'success');
+        } catch (error) {
+          console.error("PDF generation error:", error);
+          showToast('Error generating PDF', 'error');
+          document.body.removeChild(iframe);
+        }
+      }, 1500);
     }
   };
 
@@ -547,7 +715,12 @@ export const ResumeBuilder: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${editorState.personalInfo.fullName.replace(/\s+/g, '_') || 'Resume'}_ATS_Tailored.doc`;
+    const roleName = editorState.personalInfo?.targetRole || activeCompany?.jobTitle || '';
+    const candidateName = editorState.personalInfo?.fullName || 'Candidate';
+    const nameParts = [candidateName, roleName, 'ATS'].filter(Boolean);
+    const formattedFilename = nameParts.join('_').replace(/[\s\W]+/g, '_');
+
+    link.download = `${formattedFilename}.doc`;
     link.click();
     URL.revokeObjectURL(url);
     showToast('DOCX exported successfully!', 'success');
@@ -564,7 +737,7 @@ export const ResumeBuilder: React.FC = () => {
           <div>
             <h1 className="text-2xl font-black tracking-tight">Interactive AI Resume Suite</h1>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-              Select or upload a resume, tailor bullet points using Grok AI, edit sections, and export as PDF.
+              Select or upload a resume, tailor bullet points using AI, edit sections, and export as PDF.
             </p>
           </div>
 
@@ -679,6 +852,16 @@ export const ResumeBuilder: React.FC = () => {
                         type="text"
                         value={editorState.personalInfo.fullName}
                         onChange={(e) => updatePersonalInfo('fullName', e.target.value)}
+                        className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 p-2.5 text-xs outline-none dark:border-zinc-800 dark:bg-zinc-950 focus:bg-white dark:focus:bg-zinc-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase font-bold text-zinc-400 mb-1">Target Role / Job Title</label>
+                      <input
+                        type="text"
+                        value={editorState.personalInfo.targetRole || activeCompany?.jobTitle || ''}
+                        onChange={(e) => updatePersonalInfo('targetRole', e.target.value)}
+                        placeholder="e.g. Full-Stack Engineer"
                         className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 p-2.5 text-xs outline-none dark:border-zinc-800 dark:bg-zinc-950 focus:bg-white dark:focus:bg-zinc-900"
                       />
                     </div>
@@ -990,12 +1173,29 @@ export const ResumeBuilder: React.FC = () => {
                   <Eye className="h-4.5 w-4.5" />
                   Interactive Document Preview
                 </span>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setPreviewZoom(Math.max(0.5, previewZoom - 0.25))} className="p-1.5 rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-800 hover:bg-zinc-100 text-zinc-500 cursor-pointer">
+                    <ZoomOut className="h-3.5 w-3.5" />
+                  </button>
+                  <span className="text-[10px] font-bold text-zinc-500 w-8 text-center">{Math.round(previewZoom * 100)}%</span>
+                  <button onClick={() => setPreviewZoom(Math.min(2.5, previewZoom + 0.25))} className="p-1.5 rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-800 hover:bg-zinc-100 text-zinc-500 cursor-pointer">
+                    <ZoomIn className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </div>
-              <iframe
-                className="w-full h-[600px] lg:h-[800px] border border-zinc-300 dark:border-zinc-700 rounded-xl bg-zinc-200 shadow-sm"
-                srcDoc={generateHTMLTemplate()}
-                title="Resume PDF Preview"
-              />
+              <div className="relative w-full h-[600px] lg:h-[800px] rounded-xl overflow-hidden shadow-sm">
+                {isUploading && (
+                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm border border-zinc-300 dark:border-zinc-700 rounded-xl">
+                    <RefreshCw className="h-8 w-8 text-indigo-600 animate-spin mb-4" />
+                    <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300 animate-pulse">Your resume is parsing, please wait...</p>
+                  </div>
+                )}
+                <iframe
+                  className="w-full h-full border border-zinc-300 dark:border-zinc-700 rounded-xl bg-zinc-200"
+                  srcDoc={generateHTMLTemplate()}
+                  title="Resume PDF Preview"
+                />
+              </div>
             </div>
 
             {/* Panel 3: Export & AI Sidebar (span 3) */}
@@ -1016,7 +1216,7 @@ export const ResumeBuilder: React.FC = () => {
                       onChange={(e) => setPastedJd(e.target.value)}
                       placeholder="Paste JD text here to tailor resume"
                       rows={2}
-                      className="w-full rounded-xl border border-zinc-200 bg-zinc-50 p-2.5 text-[11px] outline-none focus:bg-white dark:focus:bg-zinc-900 dark:bg-zinc-950 dark:border-zinc-800 scrollbar-hide"
+                      className="w-full rounded-xl border border-zinc-200 bg-zinc-50 p-2.5 text-xs outline-none focus:bg-white dark:focus:bg-zinc-900 dark:bg-zinc-950 dark:border-zinc-800 transition-colors"
                     />
                   )}
                 </div>
@@ -1027,7 +1227,7 @@ export const ResumeBuilder: React.FC = () => {
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 hover:from-indigo-500 hover:via-purple-500 hover:to-pink-400 py-3 text-xs font-bold text-white shadow-lg shadow-indigo-500/20 disabled:opacity-40 transition-all cursor-pointer hover:shadow-indigo-500/40 hover:-translate-y-0.5"
                 >
                   <Brain className={`h-4.5 w-4.5 ${isTailoring ? 'animate-spin' : 'animate-pulse'}`} />
-                  {isTailoring ? 'Tailoring with Grok...' : 'Add ATS Keywords'}
+                  {isTailoring ? 'Tailoring with AI...' : 'Add ATS Keywords'}
                 </button>
 
                 <p className="text-[10px] text-center text-zinc-500 mt-4 leading-relaxed">
@@ -1153,7 +1353,7 @@ export const ResumeBuilder: React.FC = () => {
                   <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 space-y-6">
                     <div>
                       <h3 className="text-base font-bold">STAR-Method Experience Comparison</h3>
-                      <p className="text-xs text-zinc-400 mt-1">Review original experience phrasings vs. Grok tailored impact statements.</p>
+                      <p className="text-xs text-zinc-400 mt-1">Review original experience phrasings vs. AI tailored impact statements.</p>
                     </div>
 
                     <div className="space-y-6">
@@ -1170,7 +1370,7 @@ export const ResumeBuilder: React.FC = () => {
                             <div>
                               <span className="text-[10px] font-bold text-indigo-500 uppercase flex items-center gap-1">
                                 <Sparkles className="h-3.5 w-3.5" />
-                                Grok STAR Suggestion
+                                AI STAR Suggestion
                               </span>
                               <p className="text-xs text-zinc-800 dark:text-zinc-200 leading-normal mt-1">{comp.suggested}</p>
                             </div>

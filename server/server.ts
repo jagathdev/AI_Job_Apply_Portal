@@ -14,10 +14,7 @@ async function startServer() {
   await connectDB();
 
   // 2. Middlewares
-  const allowedOrigins = [
-    'http://localhost:5173',
-    'https://ai-job-apply-portal.vercel.app'
-  ];
+  const allowedOrigins: string[] = [];
   if (process.env.FRONTEND_URL) {
     allowedOrigins.push(process.env.FRONTEND_URL);
   }
@@ -44,7 +41,7 @@ async function startServer() {
   app.use(errorHandler as any);
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server is running successfully on http://0.0.0.0:${PORT}`);
+    console.log(`Server is running successfully on http://localhost:${PORT}`);
   });
 }
 

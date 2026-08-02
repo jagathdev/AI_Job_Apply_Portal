@@ -57,7 +57,7 @@ export const InterviewPrep: React.FC = () => {
 
     setLoading(true);
     try {
-      showToast('Generating personalized mock interview rounds with Grok...', 'info');
+      showToast('Generating personalized mock interview rounds with AI...', 'info');
       const res = await axios.post('/api/interview/generate', {
         companyId: activeCompany._id,
         resumeId: activeResume._id
@@ -84,7 +84,7 @@ export const InterviewPrep: React.FC = () => {
     setIsEvaluating(true);
 
     try {
-      showToast('Submitting practice answer to Grok evaluator...', 'info');
+      showToast('Submitting practice answer to AI evaluator...', 'info');
       const res = await axios.post('/api/interview/evaluate-response', {
         question: activeQuestion.question,
         userAnswer: userAnswer.trim(),
@@ -158,7 +158,7 @@ export const InterviewPrep: React.FC = () => {
             <div className="space-y-2">
               <h3 className="text-lg font-bold tracking-tight">Generate Preparation Guide</h3>
               <p className="text-xs text-zinc-500 leading-relaxed">
-                We found no pre-generated preparation materials for <b>{activeCompany.companyName}</b>. Click the button below to have Grok AI formulate customized mock rounds (Behavioral, Technical, HR, Scenario, Coding) tailored explicitly for your active resume and this specific job profile!
+                We found no pre-generated preparation materials for <b>{activeCompany.companyName}</b>. Click the button below to have AI formulate customized mock rounds (Behavioral, Technical, HR, Scenario, Coding) tailored explicitly for your active resume and this specific job profile!
               </p>
             </div>
 
@@ -173,7 +173,7 @@ export const InterviewPrep: React.FC = () => {
               disabled={!activeResume}
               className="flex w-full items-center justify-center gap-1.5 px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold disabled:opacity-40 transition-all cursor-pointer shadow-md shadow-indigo-500/10"
             >
-              Generate Custom Prep Guide with Grok
+              Generate Custom Prep Guide with AI
             </button>
           </div>
         </div>
@@ -441,7 +441,7 @@ export const InterviewPrep: React.FC = () => {
                         className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-500/10 disabled:opacity-45 transition-all cursor-pointer"
                       >
                         <Send className="h-4 w-4" />
-                        {isEvaluating ? 'Grok calculating feedback matrix...' : 'Submit Response for AI Review'}
+                        {isEvaluating ? 'AI calculating feedback matrix...' : 'Submit Response for AI Review'}
                       </button>
                     </div>
                   </form>

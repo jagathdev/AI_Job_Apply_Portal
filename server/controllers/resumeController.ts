@@ -1,6 +1,5 @@
 import { Response } from 'express';
-import * as _pdfParse from 'pdf-parse';
-const pdfParse: any = (_pdfParse as any).default || _pdfParse;
+import { PDFParse } from 'pdf-parse';
 import mammoth from 'mammoth';
 import { Resume, Company, User } from '../models/schemas';
 import { parseResumeText, rewriteResume } from '../services/ai/resumeAI';
@@ -9,7 +8,8 @@ import { AuthRequest } from '../middlewares/auth';
 // Helper to extract text based on file format
 async function extractTextFromBuffer(buffer: Buffer, mimetype: string): Promise<string> {
   if (mimetype === 'application/pdf') {
-    const data = await pdfParse(buffer);
+    const parser = new PDFParse({ data: buffer });
+    const data = await parser.getText();
     return data.text || '';
   } else if (
     mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
@@ -44,10 +44,15 @@ export const uploadAndParseResume = async (req: any, res: Response) => {
     console.log('Sending extracted text to Grok AI for structuring...');
     const parsedResume = await parseResumeText(rawText, customApiKeys);
 
+    const extMatch = req.file.originalname.match(/\.([^/.]+)$/);
+    const fileExt = extMatch ? extMatch[1].toLowerCase() : 'pdf';
+    const format = fileExt === 'docx' ? 'docx' : 'pdf';
+
     // Save to database
     const savedResume = await Resume.create({
       userId,
       name: req.file.originalname.replace(/\.[^/.]+$/, ""), // Strip file extension
+      format,
       rawText,
       ...parsedResume,
     });

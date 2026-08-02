@@ -10,7 +10,8 @@ import {
   applyJobLog,
   getAppliedJobs,
   updateAppliedJobStatus,
-  deleteAppliedJob
+  deleteAppliedJob,
+  deleteCompany
 } from '../controllers/companyController';
 import {
   uploadAndParseResume,
@@ -66,6 +67,7 @@ router.get('/auth/dashboard-summary', authenticateToken as any, asyncHandler(get
 router.post('/company/analyze', authenticateToken as any, asyncHandler(analyzeJobDescription));
 router.get('/company/all', authenticateToken as any, asyncHandler(getAnalyzedCompanies));
 router.get('/company/:id', authenticateToken as any, asyncHandler(getCompanyDetails));
+router.delete('/company/:id', authenticateToken as any, asyncHandler(deleteCompany));
 
 // Saved Job Bookmarks
 router.post('/company/saved/add', authenticateToken as any, asyncHandler(saveJob));

@@ -99,13 +99,13 @@ export const ATSScore: React.FC = () => {
       <div className="mx-auto max-w-5xl space-y-6">
 
 
-        
+
         {/* Header summary */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-5">
           <div>
             <h1 className="text-2xl font-black tracking-tight flex items-center gap-2">
               <Sparkles className="h-6 w-6 text-indigo-600 animate-pulse" />
-              Grok ATS Scanner & Advisor
+              AI ATS Scanner & Advisor
             </h1>
             <p className="text-xs text-zinc-400 mt-1">
               Comparing <b>{activeResume.name}</b> against <b>{activeCompany.jobTitle} ({activeCompany.companyName})</b>
@@ -123,10 +123,10 @@ export const ATSScore: React.FC = () => {
 
         {report && (
           <div className="space-y-8">
-            
+
             {/* Bento Grid Stats row */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              
+
               {/* ATS Score card */}
               <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 text-center space-y-2">
                 <span className="text-[10px] uppercase font-bold text-zinc-400">ATS Compliance</span>
@@ -159,7 +159,7 @@ export const ATSScore: React.FC = () => {
 
             {/* Keyword gaps & suggestions */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              
+
               {/* Missing keywords */}
               <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 space-y-4">
                 <h3 className="text-sm font-bold text-red-600 uppercase flex items-center gap-1.5">
@@ -201,13 +201,13 @@ export const ATSScore: React.FC = () => {
               <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 space-y-6">
                 <div>
                   <h3 className="text-base font-bold">STAR-Method Experience Comparison</h3>
-                  <p className="text-xs text-zinc-400 mt-1">Review original experience phrasings vs. Grok tailored impact statements.</p>
+                  <p className="text-xs text-zinc-400 mt-1">Review original experience phrasings vs. AI tailored impact statements.</p>
                 </div>
 
                 <div className="space-y-6">
                   {report.bulletPointComparisons.map((comp: any, idx: number) => (
                     <div key={idx} className="p-4.5 rounded-xl border border-zinc-150 bg-zinc-50/50 dark:border-zinc-800 dark:bg-zinc-950/40 grid grid-cols-1 md:grid-cols-2 gap-6 relative">
-                      
+
                       {/* Original */}
                       <div className="space-y-1">
                         <span className="text-[10px] font-bold text-zinc-400 uppercase">Original phrasing</span>
@@ -219,7 +219,7 @@ export const ATSScore: React.FC = () => {
                         <div>
                           <span className="text-[10px] font-bold text-indigo-500 uppercase flex items-center gap-1">
                             <Sparkles className="h-3.5 w-3.5" />
-                            Grok STAR Suggestion
+                            AI STAR Suggestion
                           </span>
                           <p className="text-xs text-zinc-800 dark:text-zinc-200 leading-normal mt-1">{comp.suggested}</p>
                         </div>
@@ -228,11 +228,10 @@ export const ATSScore: React.FC = () => {
                           <button
                             onClick={() => handleApplyBullet(comp, idx)}
                             disabled={comp.applied}
-                            className={`px-3.5 py-1.5 rounded-lg text-[10px] font-bold shadow-sm transition-all cursor-pointer ${
-                              comp.applied
-                                ? 'bg-emerald-500 text-white cursor-default'
-                                : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                            }`}
+                            className={`px-3.5 py-1.5 rounded-lg text-[10px] font-bold shadow-sm transition-all cursor-pointer ${comp.applied
+                              ? 'bg-emerald-500 text-white cursor-default'
+                              : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                              }`}
                           >
                             {comp.applied ? 'Adopted ✓' : 'Adopt AI Phrasing'}
                           </button>

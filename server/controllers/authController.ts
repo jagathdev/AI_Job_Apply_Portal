@@ -112,10 +112,12 @@ export const getDashboardSummary = async (req: AuthRequest, res: Response) => {
     return res.status(404).json({ error: 'User not found.' });
   }
 
-  // Check counts
-  const recentResume = await Resume.findOne({ userId }).sort({ createdAt: -1 });
-  const recentCompany = await Company.findOne({ userId }).sort({ createdAt: -1 });
-  const recentInterview = await InterviewPrep.findOne({ userId }).sort({ createdAt: -1 });
+  // Check counts concurrently for performance
+  const [recentResume, recentCompany, recentInterview] = await Promise.all([
+    Resume.findOne({ userId }).sort({ createdAt: -1 }),
+    Company.findOne({ userId }).sort({ createdAt: -1 }),
+    InterviewPrep.findOne({ userId }).sort({ createdAt: -1 }),
+  ]);
 
   // Calculate dynamic completion score
   let score = 35; // base register

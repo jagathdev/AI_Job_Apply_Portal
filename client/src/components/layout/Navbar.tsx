@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Briefcase, FileText, Sparkles, CheckCircle, 
+import {
+  Briefcase, FileText, Sparkles, CheckCircle,
   Menu, X, Sun, Moon, LogOut, User, Settings, ShieldAlert,
   Building, Home as HomeIcon
 } from 'lucide-react';
@@ -35,7 +35,7 @@ export const Navbar: React.FC = () => {
     <nav className="sticky top-0 z-40 w-full border-b border-zinc-200/80 bg-white/85 backdrop-blur-md dark:border-zinc-800/80 dark:bg-zinc-950/85 text-zinc-900 dark:text-zinc-50 transition-colors duration-300">
       <div className="mx-auto max-w-[96%] w-full px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
-          
+
           {/* Logo */}
           <div className="flex items-center">
             <Link to={user ? '/home' : '/'} className="flex items-center gap-2 group shrink-0">
@@ -57,11 +57,10 @@ export const Navbar: React.FC = () => {
                   <Link
                     key={link.path}
                     to={link.path}
-                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-                      isActive(link.path)
+                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${isActive(link.path)
                         ? 'bg-zinc-100 dark:bg-zinc-900 text-indigo-600 dark:text-indigo-400'
                         : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-zinc-50/50 dark:hover:bg-zinc-900/40'
-                    }`}
+                      }`}
                   >
                     <Icon className="h-4 w-4" />
                     {link.name}
@@ -199,11 +198,10 @@ export const Navbar: React.FC = () => {
                         key={link.path}
                         to={link.path}
                         onClick={() => setIsOpen(false)}
-                        className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-base font-medium transition-all ${
-                          isActive(link.path)
+                        className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-base font-medium transition-all ${isActive(link.path)
                             ? 'bg-zinc-100 dark:bg-zinc-900 text-indigo-600 dark:text-indigo-400'
                             : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-900/50'
-                        }`}
+                          }`}
                       >
                         <Icon className="h-5 w-5" />
                         {link.name}

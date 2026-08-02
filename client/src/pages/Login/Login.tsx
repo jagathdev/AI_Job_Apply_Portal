@@ -22,7 +22,7 @@ export const Login: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const res = await axios.post('/api/auth/login', {
+      const res = await axios.post(`/api/auth/login`, {
         identifier: identifier.trim(),
         password: password.trim()
       });

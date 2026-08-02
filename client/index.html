@@ -1,28 +1,39 @@
 <!doctype html>
 <html lang="en" class="dark">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Job Search Assistant</title>
-    <style>
-      body {
-        background-color: #09090b; /* zinc-950 */
-        color: #fafafa;
-      }
-      html:not(.dark) body {
-        background-color: #fafafa; /* zinc-50 */
-        color: #18181b;
-      }
-    </style>
-    <script>
-      if (localStorage.getItem('job_search_theme') === 'light') {
-        document.documentElement.classList.remove('dark');
-      }
-    </script>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
 
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Job Search Assistant</title>
+  <style>
+    body {
+      background-color: #09090b;
+      /* zinc-950 */
+      color: #fafafa;
+    }
+
+    html:not(.dark) body {
+      background-color: #fafafa;
+      /* zinc-50 */
+      color: #18181b;
+    }
+  </style>
+  <script>
+    const getCookie = (name) => {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop().split(';').shift();
+      return null;
+    };
+    if (getCookie('job_search_theme') === 'light') {
+      document.documentElement.classList.remove('dark');
+    }
+  </script>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
+</html>

@@ -75,7 +75,7 @@ export const analyzeJobDescription = async (req: AuthRequest, res: Response) => 
     } catch (scrapeError: any) {
       console.warn('Scraper failed or blocked:', scrapeError);
       // Fallback: If scraper fails completely, instruct AI to infer from URL slug
-      finalJdText = `Job URL: ${jdUrl}\n\n(Note: The website blocked the scraper. Please infer all possible job details purely from the URL slug provided above. Do your best to guess the title, company, location, and requirements based on the URL.)`;
+      finalJdText = `Job URL: ${jdUrl}\n\n(CRITICAL INSTRUCTION: The website blocked our scraper. However, this IS a valid job URL. You MUST set isJobDescription to true. Please aggressively infer the job title, company name, and location purely from the words in the URL slug provided above. Guess the details as best as you can.)`;
     }
   }
 
@@ -228,4 +228,19 @@ export const deleteAppliedJob = async (req: AuthRequest, res: Response) => {
   const userId = req.user?.id;
   await AppliedJob.deleteOne({ _id: id, userId });
   return res.status(200).json({ message: 'Job log deleted.' });
+};
+
+export const deleteCompany = async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const userId = req.user?.id;
+  console.log(`Deleting company with id: ${id} for user: ${userId}`);
+  
+  try {
+    const result = await Company.deleteOne({ _id: id, userId });
+    console.log('Delete result:', result);
+    return res.status(200).json({ message: 'Analyzed job deleted.' });
+  } catch (error) {
+    console.error('Error deleting company:', error);
+    return res.status(500).json({ error: 'Failed to delete company' });
+  }
 };

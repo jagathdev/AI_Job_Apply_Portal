@@ -2,7 +2,33 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
 // Base API URL configuration
-axios.defaults.baseURL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://ai-job-apply-portal.onrender.com' : '');
+axios.defaults.baseURL = import.meta.env.VITE_API_URL;
+
+// Cookie Utilities
+const setCookie = (name: string, value: string, days = 7) => {
+  let expires = "";
+  if (days) {
+    const date = new Date();
+    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+    expires = "; expires=" + date.toUTCString();
+  }
+  document.cookie = name + "=" + (encodeURIComponent(value) || "") + expires + "; path=/";
+};
+
+const getCookie = (name: string) => {
+  const nameEQ = name + "=";
+  const ca = document.cookie.split(';');
+  for (let i = 0; i < ca.length; i++) {
+    let c = ca[i];
+    while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+    if (c.indexOf(nameEQ) === 0) return decodeURIComponent(c.substring(nameEQ.length, c.length));
+  }
+  return null;
+};
+
+const eraseCookie = (name: string) => {
+  document.cookie = name + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+};
 
 export interface User {
   id: string;
@@ -82,19 +108,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, []);
 
-  // Initialize theme and auth from localStorage on mount
+  // Initialize theme and auth from cookies on mount
   useEffect(() => {
-    const storedToken = localStorage.getItem('job_search_token');
-    const storedUser = localStorage.getItem('job_search_user');
-    const storedTheme = localStorage.getItem('job_search_theme') as 'light' | 'dark';
-    const storedCompany = localStorage.getItem('active_company_cache');
-    const storedResume = localStorage.getItem('active_resume_cache');
+    const storedToken = getCookie('job_search_token');
+    const storedUser = getCookie('job_search_user');
+    const storedTheme = getCookie('job_search_theme') as 'light' | 'dark';
+    const storedCompany = getCookie('active_company_cache');
+    const storedResume = getCookie('active_resume_cache');
 
     if (storedToken && storedUser) {
       setToken(storedToken);
       const parsedUser = JSON.parse(storedUser);
       setUser(parsedUser);
       axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+
+      // Refresh cookie expiration since the user is active
+      setCookie('job_search_token', storedToken);
+      setCookie('job_search_user', storedUser);
     }
 
     if (storedCompany) {
@@ -130,15 +160,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const loginUser = (userToken: string, userData: User) => {
     setToken(userToken);
     setUser(userData);
-    localStorage.setItem('job_search_token', userToken);
-    localStorage.setItem('job_search_user', JSON.stringify(userData));
+    setCookie('job_search_token', userToken);
+    setCookie('job_search_user', JSON.stringify(userData));
     axios.defaults.headers.common['Authorization'] = `Bearer ${userToken}`;
 
     // Set theme based on user preferences
     if (userData.themePreference) {
       setTheme(userData.themePreference);
       applyThemeClass(userData.themePreference);
-      localStorage.setItem('job_search_theme', userData.themePreference);
+      setCookie('job_search_theme', userData.themePreference);
     }
     showToast(`Welcome back, ${userData.name}!`, 'success');
   };
@@ -149,8 +179,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setActiveResumeState(null);
     setActiveCompanyState(null);
     setDashboardStats(null);
-    localStorage.removeItem('job_search_token');
-    localStorage.removeItem('job_search_user');
+    eraseCookie('job_search_token');
+    eraseCookie('job_search_user');
     delete axios.defaults.headers.common['Authorization'];
     showToast('Logged out successfully.', 'info');
   };
@@ -159,13 +189,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(nextTheme);
     applyThemeClass(nextTheme);
-    localStorage.setItem('job_search_theme', nextTheme);
+    setCookie('job_search_theme', nextTheme);
 
     // If user is logged in, optionally persist preference
     if (user) {
       const updatedUser = { ...user, themePreference: nextTheme };
       setUser(updatedUser);
-      localStorage.setItem('job_search_user', JSON.stringify(updatedUser));
+      setCookie('job_search_user', JSON.stringify(updatedUser));
 
       axios.put('/api/profile', { themePreference: nextTheme })
         .catch(err => console.error('Failed to sync theme preference:', err));
@@ -189,18 +219,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const setActiveResume = (resume: any) => {
     setActiveResumeState(resume);
     if (resume) {
-      localStorage.setItem('active_resume_cache', JSON.stringify(resume));
+      setCookie('active_resume_cache', JSON.stringify(resume));
     } else {
-      localStorage.removeItem('active_resume_cache');
+      eraseCookie('active_resume_cache');
     }
   };
 
   const setActiveCompany = (company: any) => {
     setActiveCompanyState(company);
     if (company) {
-      localStorage.setItem('active_company_cache', JSON.stringify(company));
+      setCookie('active_company_cache', JSON.stringify(company));
     } else {
-      localStorage.removeItem('active_company_cache');
+      eraseCookie('active_company_cache');
     }
   };
 

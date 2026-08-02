@@ -14,7 +14,9 @@ import {
 interface ResumeItem {
   _id: string;
   name: string;
+  format?: 'pdf' | 'docx';
   createdAt: string;
+  atsScore?: number;
 }
 
 interface AppliedJob {
@@ -41,6 +43,7 @@ interface AnalyzedCompany {
   jobTitle: string;
   location?: string;
   techStack?: string[];
+  createdAt?: string;
 }
 
 const STATUS_OPTIONS = [
@@ -67,6 +70,17 @@ export const Dashboard: React.FC = () => {
   const [isUpdatingStatusId, setIsUpdatingStatusId] = useState<string | null>(null);
   const [openStatusDropdownId, setOpenStatusDropdownId] = useState<string | null>(null);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [resumeFilter, setResumeFilter] = useState<'all' | 'pdf' | 'docx'>('all');
+  const [chartView, setChartView] = useState<'week' | 'month'>('week');
+  const [jobMonthFilter, setJobMonthFilter] = useState<string>('all');
+  const [jobDisplayLimit, setJobDisplayLimit] = useState<number>(6);
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    id: string;
+    type: 'resume' | 'applied' | 'saved' | 'company';
+    title: string;
+    message: string;
+  }>({ isOpen: false, id: '', type: 'resume', title: '', message: '' });
 
   useEffect(() => {
     setExpandedIndex(null);
@@ -98,28 +112,65 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  const handleDeleteResume = async (id: string, e: React.MouseEvent) => {
+  const handleDeleteResume = (id: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!window.confirm('Are you sure you want to delete this resume?')) return;
-    try {
-      await axios.delete(`/api/resume/${id}`);
-      setResumes((prev) => prev.filter((r) => r._id !== id));
-      showToast('Resume removed successfully.', 'success');
-    } catch (err) {
-      showToast('Failed to delete resume.', 'error');
-    }
+    setDeleteModal({
+      isOpen: true,
+      id,
+      type: 'resume',
+      title: 'Delete Resume',
+      message: 'Are you sure you want to delete this resume? This action cannot be undone.'
+    });
   };
 
-  const handleDeleteSaved = async (id: string, e: React.MouseEvent) => {
+  const handleDeleteSaved = (id: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    setDeleteModal({
+      isOpen: true,
+      id,
+      type: 'saved',
+      title: 'Remove Bookmark',
+      message: 'Are you sure you want to remove this bookmarked job?'
+    });
+  };
+
+  const handleDeleteCompany = (id: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDeleteModal({
+      isOpen: true,
+      id,
+      type: 'company',
+      title: 'Delete Job Analysis',
+      message: 'Are you sure you want to delete this generated job analysis?'
+    });
+  };
+
+  const confirmDelete = async () => {
+    const { id, type } = deleteModal;
+    setDeleteModal(prev => ({ ...prev, isOpen: false }));
     try {
-      await axios.delete(`/api/company/saved/${id}`);
-      setSavedJobs((prev) => prev.filter((s) => s._id !== id));
-      showToast('Saved job bookmark removed.', 'success');
+      if (type === 'resume') {
+        await axios.delete(`/api/resume/${id}`);
+        setResumes((prev) => prev.filter((r) => r._id !== id));
+        showToast('Resume removed successfully.', 'success');
+      } else if (type === 'saved') {
+        await axios.delete(`/api/company/saved/${id}`);
+        setSavedJobs((prev) => prev.filter((s) => s._id !== id));
+        showToast('Saved job bookmark removed.', 'success');
+      } else if (type === 'company') {
+        await axios.delete(`/api/company/${id}`);
+        setAnalyzedCompanies((prev) => prev.filter((c) => c._id !== id));
+        showToast('Job analysis deleted.', 'success');
+      } else if (type === 'applied') {
+        await axios.delete(`/api/company/applied/${id}`);
+        setAppliedJobs((prev) => prev.filter((j) => j._id !== id));
+        showToast('Application log removed.', 'success');
+      }
     } catch (err) {
-      showToast('Failed to remove saved job.', 'error');
+      showToast('Failed to delete item.', 'error');
     }
   };
 
@@ -140,17 +191,16 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  const handleDeleteApplied = async (id: string, e: React.MouseEvent) => {
+  const handleDeleteApplied = (id: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!window.confirm('Remove this application log?')) return;
-    try {
-      await axios.delete(`/api/company/applied/${id}`);
-      setAppliedJobs((prev) => prev.filter((j) => j._id !== id));
-      showToast('Application log removed.', 'success');
-    } catch (err) {
-      showToast('Failed to delete application log.', 'error');
-    }
+    setDeleteModal({
+      isOpen: true,
+      id,
+      type: 'applied',
+      title: 'Delete Application Log',
+      message: 'Are you sure you want to remove this application log?'
+    });
   };
 
   // Find dynamic company _id based on name matching
@@ -161,6 +211,81 @@ export const Dashboard: React.FC = () => {
   };
 
   // Calculate dynamic match scores for jobs based on tech overlays
+  // Group and sort analyzed companies
+  const groupedJobs = React.useMemo(() => {
+    let filtered = analyzedCompanies;
+
+    if (searchQuery) {
+      filtered = filtered.filter(job =>
+        job.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        job.jobTitle.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    if (jobMonthFilter !== 'all') {
+      filtered = filtered.filter(job => {
+        if (!job.createdAt) return false;
+        const date = new Date(job.createdAt);
+        return date.getMonth().toString() === jobMonthFilter;
+      });
+    }
+
+    // Sort descending by date
+    const sorted = [...filtered].sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
+
+    // Group by formatted date
+    const groups: { dateStr: string; dateObj: Date; jobs: AnalyzedCompany[] }[] = [];
+
+    sorted.forEach(job => {
+      if (!job.createdAt) return;
+      const dateObj = new Date(job.createdAt);
+      // Format as "Aug 1"
+      const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+      const existingGroup = groups.find(g => g.dateStr === dateStr);
+      if (existingGroup) {
+        existingGroup.jobs.push(job);
+      } else {
+        groups.push({ dateStr, dateObj, jobs: [job] });
+      }
+    });
+
+    return groups;
+  }, [analyzedCompanies, searchQuery, jobMonthFilter]);
+
+  const visibleGroupedJobs = React.useMemo(() => {
+    let count = 0;
+    const visibleGroups: typeof groupedJobs = [];
+
+    for (const group of groupedJobs) {
+      if (count >= jobDisplayLimit) break;
+
+      if (count + group.jobs.length <= jobDisplayLimit) {
+        visibleGroups.push(group);
+        count += group.jobs.length;
+      } else {
+        // Only push up to the limit
+        const remaining = jobDisplayLimit - count;
+        visibleGroups.push({
+          ...group,
+          jobs: group.jobs.slice(0, remaining)
+        });
+        count += remaining;
+        break;
+      }
+    }
+
+    return visibleGroups;
+  }, [groupedJobs, jobDisplayLimit]);
+
+  const handleLoadMore = () => {
+    setJobDisplayLimit(prev => prev + 12);
+  };
+
   const calculateMatchScore = (companyName: string) => {
     const clean = companyName.toLowerCase().trim();
     const comp = analyzedCompanies.find((c) => c.companyName.toLowerCase().trim() === clean);
@@ -247,8 +372,13 @@ export const Dashboard: React.FC = () => {
           {/* KPI Dashboard Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
             <div className="bg-white/5 border border-white/10 p-5 rounded-2xl flex flex-col justify-between shadow-lg backdrop-blur-sm">
-              <span className="text-[10px] font-black uppercase text-zinc-400 tracking-wider">Jobs Applied</span>
-              <span className="text-3xl font-black mt-2 text-indigo-300">{statusStats.total}</span>
+              <span className="text-[10px] font-black uppercase text-zinc-400 tracking-wider">Jobs Generated</span>
+              <div className="flex items-end justify-between mt-2">
+                <span className="text-3xl font-black text-indigo-300">{analyzedCompanies.length}</span>
+                <span className="text-[10px] font-bold text-zinc-400/60 uppercase tracking-wider mb-1">
+                  {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                </span>
+              </div>
             </div>
             <div className="bg-white/5 border border-white/10 p-5 rounded-2xl flex flex-col justify-between shadow-lg backdrop-blur-sm">
               <span className="text-[10px] font-black uppercase text-zinc-400 tracking-wider">Active Resumes</span>
@@ -371,85 +501,131 @@ export const Dashboard: React.FC = () => {
           <div className="lg:col-span-2 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 shadow-sm flex flex-col justify-between">
             <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
               <h3 className="text-sm font-black flex items-center gap-1.5 text-zinc-800 dark:text-zinc-100">
-                Job Confirmation Score Progression
+                Jobs Generated
               </h3>
-              <span className="shrink-0 text-[10px] font-black px-2.5 py-1 rounded bg-indigo-50 dark:bg-indigo-950/40 text-indigo-650 dark:text-indigo-400 uppercase tracking-wide">
-                AI Analytics
-              </span>
+
+              <div className="flex bg-zinc-100 dark:bg-zinc-800 rounded-lg p-1">
+                <button
+                  onClick={() => setChartView('week')}
+                  className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${chartView === 'week' ? 'bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+                >
+                  Week
+                </button>
+                <button
+                  onClick={() => setChartView('month')}
+                  className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${chartView === 'month' ? 'bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+                >
+                  Month
+                </button>
+              </div>
             </div>
 
-            {/* Custom SVG Line Graph */}
-            <div className="flex-grow flex items-center justify-center py-2 h-44 relative min-h-[140px]">
-              {scoreData.length === 0 ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 text-zinc-400 dark:text-zinc-500">
-                  <AlertCircle className="h-7 w-7 mb-2 text-indigo-500 opacity-60" />
-                  <span className="text-xs font-bold">No score progression data yet.</span>
-                  <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-1 max-w-[280px]">
-                    Run a job analysis on the Home page to start tracking scores.
-                  </p>
-                </div>
-              ) : (
-                <svg className="w-full h-full" viewBox="0 0 500 150">
-                  {/* Horizontal Gridlines */}
-                  <line x1="20" y1="20" x2="480" y2="20" stroke="#e4e4e7" strokeWidth="0.5" className="dark:stroke-zinc-800" strokeDasharray="3 3" />
-                  <line x1="20" y1="65" x2="480" y2="65" stroke="#e4e4e7" strokeWidth="0.5" className="dark:stroke-zinc-800" strokeDasharray="3 3" />
-                  <line x1="20" y1="110" x2="480" y2="110" stroke="#e4e4e7" strokeWidth="0.5" className="dark:stroke-zinc-800" strokeDasharray="3 3" />
+            {/* Custom SVG Bar Graph */}
+            <div className="flex-grow flex items-end justify-center py-2 h-[280px] relative min-h-[280px]">
+              {(() => {
+                let data: { label: string; count: number; fullLabel: string; companies: string[] }[] = [];
 
-                  {/* Bottom line axis */}
-                  <line x1="20" y1="130" x2="480" y2="130" stroke="#d4d4d8" strokeWidth="1" className="dark:stroke-zinc-800" />
+                if (chartView === 'week') {
+                  // Week view (Mon - Sun)
+                  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                  const fullDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+                  data = days.map((d, i) => ({ label: d, count: 0, fullLabel: fullDays[i], companies: [] }));
 
-                  {/* Dynamic Graph Path representing logged steps */}
-                  {(() => {
-                    const getX = (idx: number) => scoreData.length === 1 ? 250 : 40 + (idx * (420 / (scoreData.length - 1)));
-                    const getY = (s: number) => 130 - s;
-                    let d = `M ${getX(0)} ${getY(scoreData[0].score)}`;
-                    for (let i = 1; i < scoreData.length; i++) {
-                      d += ` L ${getX(i)} ${getY(scoreData[i].score)}`;
+                  const today = new Date();
+                  const currentDayIndex = (today.getDay() + 6) % 7; // 0 for Mon, 6 for Sun
+                  const startOfWeek = new Date(today);
+                  startOfWeek.setDate(today.getDate() - currentDayIndex);
+                  startOfWeek.setHours(0, 0, 0, 0);
+
+                  analyzedCompanies.forEach(job => {
+                    if (!job.createdAt) return;
+                    const date = new Date(job.createdAt);
+                    if (date >= startOfWeek) {
+                      const dayIdx = (date.getDay() + 6) % 7;
+                      data[dayIdx].count++;
+                      data[dayIdx].companies.push(job.companyName);
                     }
-                    return (
-                      <path
-                        d={d}
-                        fill="none"
-                        stroke="url(#indigo-grad)"
-                        strokeWidth="3.5"
-                        strokeLinecap="round"
-                      />
-                    );
-                  })()}
+                  });
+                } else {
+                  // Month view (Jan - Dec)
+                  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                  data = months.map(m => ({ label: m, count: 0, fullLabel: m, companies: [] }));
+                  const currentYear = new Date().getFullYear();
 
-                  {/* Dynamic Point Marks and text labels */}
-                  {scoreData.map((item, i) => {
-                    const getX = (idx: number) => scoreData.length === 1 ? 250 : 40 + (idx * (420 / (scoreData.length - 1)));
-                    const getY = (s: number) => 130 - s;
-                    const cx = getX(i);
-                    const cy = getY(item.score);
-                    return (
-                      <g key={i}>
-                        <circle cx={cx} cy={cy} r="4.5" className="fill-indigo-600 stroke-white stroke-2 dark:stroke-zinc-900" />
-                        <text x={cx} y={cy - 12} textAnchor="middle" className="text-[10px] font-black fill-indigo-650 dark:fill-indigo-400">
-                          {item.score}%
-                        </text>
-                        <text x={cx} y="145" textAnchor="middle" className="text-[9px] font-black fill-zinc-400 dark:fill-zinc-500 uppercase tracking-wide">
-                          {item.companyName.length > 8 ? item.companyName.substring(0, 6) + '..' : item.companyName}
-                        </text>
-                      </g>
-                    );
-                  })}
+                  analyzedCompanies.forEach(job => {
+                    if (!job.createdAt) return;
+                    const date = new Date(job.createdAt);
+                    if (date.getFullYear() === currentYear) {
+                      const monthIdx = date.getMonth();
+                      data[monthIdx].count++;
+                      data[monthIdx].companies.push(job.companyName);
+                    }
+                  });
+                }
 
-                  {/* SVG Gradient definitions */}
-                  <defs>
-                    <linearGradient id="indigo-grad" x1="0%" y1="0%" x2="100%" y2="0%" gradientUnits="userSpaceOnUse">
-                      <stop offset="0%" stopColor="#6366f1" />
-                      <stop offset="50%" stopColor="#a855f7" />
-                      <stop offset="100%" stopColor="#10b981" />
-                    </linearGradient>
-                  </defs>
-                </svg>
-              )}
+                const maxCount = Math.max(...data.map(d => d.count), 5); // Ensure some height even if small
+                const barWidth = chartView === 'week' ? 30 : 20;
+                const gap = chartView === 'week' ? 40 : 15;
+                const maxHeight = 100;
+
+                return (
+                  <div className="w-full h-full overflow-x-auto overflow-y-hidden scrollbar-hide flex items-end justify-start sm:justify-center relative pb-[40px] px-2 pt-[100px]">
+                    {/* Horizontal grid line */}
+                    <div className="absolute bottom-[40px] left-0 right-0 h-px bg-zinc-200 dark:bg-zinc-800"></div>
+
+                    <div className="flex items-end gap-[15px] sm:gap-[40px] px-2 h-[120px] mt-auto" style={{ gap: `${gap}px` }}>
+                      {data.map((item, idx) => {
+                        const height = (item.count / maxCount) * maxHeight;
+                        return (
+                          <div key={idx} className="flex flex-col items-center justify-end group relative h-full">
+                            {/* Tooltip with Companies List */}
+                            <div className="absolute bottom-full mb-3 opacity-0 group-hover:opacity-100 transition-opacity bg-zinc-800 dark:bg-white text-white dark:text-zinc-900 text-[10px] font-bold p-2.5 rounded-lg shadow-xl pointer-events-none z-10 min-w-[140px] flex flex-col items-center">
+                              <div className="text-indigo-400 dark:text-indigo-600 mb-1.5 pb-1.5 border-b border-zinc-700 dark:border-zinc-200 w-full text-center">
+                                {item.fullLabel}: {item.count} jobs
+                              </div>
+                              {item.companies.length > 0 ? (
+                                <ul className="flex flex-col gap-1 text-left font-medium w-full">
+                                  {item.companies.slice(-5).map((c, i) => (
+                                    <li key={i} className="truncate max-w-[160px] text-zinc-300 dark:text-zinc-600">• {c}</li>
+                                  ))}
+                                  {item.companies.length > 5 && (
+                                    <li className="text-zinc-400 dark:text-zinc-500 italic mt-0.5 font-bold text-center w-full">+{item.companies.length - 5} more</li>
+                                  )}
+                                </ul>
+                              ) : (
+                                <span className="text-zinc-500 font-medium italic">No jobs</span>
+                              )}
+
+                              {/* Triangle pointer */}
+                              <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 bg-zinc-800 dark:bg-white rounded-sm"></div>
+                            </div>
+
+                            {/* Count label above bar */}
+                            {item.count > 0 && (
+                              <span className="text-[10px] font-black text-indigo-500 mb-1.5">{item.count}</span>
+                            )}
+                            {item.count === 0 && (
+                              <span className="text-[10px] font-black text-zinc-300 dark:text-zinc-600 mb-1.5 opacity-0 group-hover:opacity-100 transition-opacity">{item.count}</span>
+                            )}
+
+                            {/* Bar */}
+                            <div
+                              className={`w-[${barWidth}px] rounded-t-sm transition-all duration-500 hover:brightness-110 ${item.count > 0 ? 'bg-gradient-to-t from-indigo-600 to-purple-500' : 'bg-zinc-100 dark:bg-zinc-800'}`}
+                              style={{ height: `${height || 2}px`, width: `${barWidth}px` }}
+                            ></div>
+
+                            {/* X Axis Label */}
+                            <span className="absolute top-full mt-3 text-[9px] font-bold text-zinc-400 uppercase tracking-wider whitespace-nowrap left-1/2 -translate-x-1/2">{item.fullLabel}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
-
-            <p className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 leading-normal mt-2">
-              Graph maps historical job confirmation scores recursively across recent analyzed opportunities.
+            <p className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 leading-normal mt-6 text-center">
+              Graph maps the amount of jobs generated by week and month.
             </p>
           </div>
         </div>
@@ -457,38 +633,81 @@ export const Dashboard: React.FC = () => {
         {/* 3. WORKSPACE MANAGEMENTS PANEL */}
         <div className="w-full space-y-6">
 
-          {/* Header Tabs */}
-          <div className="flex justify-start w-full border-b border-zinc-200 dark:border-zinc-800 overflow-x-auto scrollbar-hide">
-            <button
-              onClick={() => { setActiveTab('applied'); setSearchQuery(''); }}
-              className={`py-3.5 px-5 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${activeTab === 'applied'
-                ? 'border-indigo-650 text-indigo-650 dark:border-indigo-400 dark:text-indigo-400'
-                : 'border-transparent text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
-                }`}
-            >
-              <Briefcase className="h-4 w-4 shrink-0" />
-              My Job List ({appliedJobs.length})
-            </button>
-            <button
-              onClick={() => { setActiveTab('resumes'); setSearchQuery(''); }}
-              className={`py-3.5 px-5 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${activeTab === 'resumes'
-                ? 'border-indigo-650 text-indigo-650 dark:border-indigo-400 dark:text-indigo-400'
-                : 'border-transparent text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
-                }`}
-            >
-              <FileText className="h-4 w-4 shrink-0" />
-              My Resumes ({resumes.length})
-            </button>
-            <button
-              onClick={() => { setActiveTab('bookmarks'); setSearchQuery(''); }}
-              className={`py-3.5 px-5 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${activeTab === 'bookmarks'
-                ? 'border-indigo-650 text-indigo-650 dark:border-indigo-400 dark:text-indigo-400'
-                : 'border-transparent text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
-                }`}
-            >
-              <Bookmark className="h-4 w-4 shrink-0" />
-              Bookmarked ({savedJobs.length})
-            </button>
+          {/* Header Tabs & Search */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full border-b border-zinc-200 dark:border-zinc-800 pb-2 mb-6 gap-4">
+            <div className="flex justify-start overflow-x-auto scrollbar-hide w-full sm:w-auto">
+              <button
+                onClick={() => { setActiveTab('applied'); setSearchQuery(''); }}
+                className={`py-3.5 px-5 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${activeTab === 'applied'
+                  ? 'border-indigo-650 text-indigo-650 dark:border-indigo-400 dark:text-indigo-400'
+                  : 'border-transparent text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+                  }`}
+              >
+                <Briefcase className="h-4 w-4 shrink-0" />
+                My Job List ({analyzedCompanies.length})
+              </button>
+              <button
+                onClick={() => { setActiveTab('resumes'); setSearchQuery(''); }}
+                className={`py-3.5 px-5 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${activeTab === 'resumes'
+                  ? 'border-indigo-650 text-indigo-650 dark:border-indigo-400 dark:text-indigo-400'
+                  : 'border-transparent text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+                  }`}
+              >
+                <FileText className="h-4 w-4 shrink-0" />
+                My Resumes ({resumes.length})
+              </button>
+              <button
+                onClick={() => { setActiveTab('bookmarks'); setSearchQuery(''); }}
+                className={`py-3.5 px-5 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${activeTab === 'bookmarks'
+                  ? 'border-indigo-650 text-indigo-650 dark:border-indigo-400 dark:text-indigo-400'
+                  : 'border-transparent text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+                  }`}
+              >
+                <Bookmark className="h-4 w-4 shrink-0" />
+                Bookmarked ({savedJobs.length})
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+              {activeTab === 'applied' && (
+                <div className="relative shrink-0">
+                  <select
+                    value={jobMonthFilter}
+                    onChange={(e) => setJobMonthFilter(e.target.value)}
+                    className="pl-3 pr-8 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 transition-all text-zinc-800 dark:text-zinc-200 appearance-none cursor-pointer"
+                  >
+                    <option value="all">All Months</option>
+                    <option value="0">January</option>
+                    <option value="1">February</option>
+                    <option value="2">March</option>
+                    <option value="3">April</option>
+                    <option value="4">May</option>
+                    <option value="5">June</option>
+                    <option value="6">July</option>
+                    <option value="7">August</option>
+                    <option value="8">September</option>
+                    <option value="9">October</option>
+                    <option value="10">November</option>
+                    <option value="11">December</option>
+                  </select>
+                  <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400">
+                    <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                </div>
+              )}
+              <div className="relative w-full sm:w-64 shrink-0">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition-all text-zinc-800 dark:text-zinc-200"
+                />
+              </div>
+            </div>
           </div>
 
           {/* TAB CONTENTS */}
@@ -497,12 +716,12 @@ export const Dashboard: React.FC = () => {
             {/* APPLIED JOBS PANEL */}
             {activeTab === 'applied' && (
               <div className="space-y-4">
-                {appliedJobs.length === 0 ? (
+                {analyzedCompanies.length === 0 ? (
                   <div className="rounded-2xl border border-zinc-200 border-dashed p-10 text-center text-zinc-400 dark:border-zinc-800 dark:text-zinc-500 bg-white dark:bg-zinc-900">
                     <Briefcase className="h-10 w-10 mx-auto mb-3 opacity-40 text-indigo-500" />
-                    <h4 className="text-sm font-bold text-zinc-700 dark:text-zinc-300">No job applications logged yet</h4>
+                    <h4 className="text-sm font-bold text-zinc-700 dark:text-zinc-300">No job analysis generated yet</h4>
                     <p className="text-xs mt-1.5 max-w-sm mx-auto">
-                      Once you run a job analysis on the Home page, you can log it as an active application stage.
+                      Once you run a job analysis on the Home page, it will appear here.
                     </p>
                     <Link
                       to="/home"
@@ -513,137 +732,75 @@ export const Dashboard: React.FC = () => {
                     </Link>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 gap-4">
-                    {appliedJobs.map((job) => {
-                      const companyId = findCompanyId(job.companyName);
-                      const matchScore = calculateMatchScore(job.companyName);
-                      return (
-                        <div
-                          key={job._id}
-                          className="p-5 rounded-2xl bg-white border border-zinc-200 dark:bg-zinc-900 dark:border-zinc-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 group hover:border-indigo-500/40 transition-all"
-                        >
-                          <div className="space-y-1.5 min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md border ${job.status === 'completed' || job.status === 'offered'
-                                ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900/65'
-                                : job.status === 'interview' || job.status === 'interviewing'
-                                  ? 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-900/65'
-                                  : job.status === 'rejected'
-                                    ? 'bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-900/65'
-                                    : 'bg-indigo-50 text-indigo-600 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-900/65'
-                                }`}>
-                                {job.status === 'interviewing' ? 'interview' : job.status === 'offered' ? 'completed' : job.status}
-                              </span>
-
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-zinc-50 border border-zinc-150 text-zinc-650 dark:bg-zinc-950/60 dark:border-zinc-800/80 dark:text-zinc-400 flex items-center gap-1">
-                                Match Score:
-                                <b className="text-indigo-600 dark:text-indigo-400">{matchScore}%</b>
-                              </span>
-                            </div>
-
-                            <h4 className="text-sm font-bold text-zinc-800 dark:text-zinc-100 truncate">
-                              {job.jobTitle}
-                            </h4>
-
-                            <p className="text-xs text-zinc-450 dark:text-zinc-500 font-semibold">
-                              {job.companyName} • Logged on {new Date(job.appliedDate).toLocaleDateString()}
-                            </p>
-
-                            {job.notes && (
-                              <p className="text-[11px] text-zinc-400 dark:text-zinc-500 italic mt-1.5 truncate">
-                                Notes: "{job.notes}"
-                              </p>
-                            )}
-                          </div>
-
-                          <div className="flex flex-wrap items-center gap-2 shrink-0">
-                            {/* Custom Status Dropdown */}
-                            <div className="relative">
-                              <button
-                                disabled={isUpdatingStatusId === job._id}
-                                onClick={() => setOpenStatusDropdownId(openStatusDropdownId === job._id ? null : job._id)}
-                                onBlur={(e) => {
-                                  if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-                                    setTimeout(() => setOpenStatusDropdownId(null), 150);
-                                  }
-                                }}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[11px] font-bold transition-all disabled:opacity-50
-                                    ${openStatusDropdownId === job._id
-                                    ? 'border-indigo-500 bg-white dark:bg-zinc-900 dark:border-indigo-500 shadow-sm'
-                                    : 'border-zinc-200 bg-zinc-50 hover:bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-900'}
-                                    ${STATUS_OPTIONS.find(o => o.value === (job.status === 'interviewing' ? 'interview' : job.status === 'offered' ? 'completed' : job.status))?.color || ''}
-                                  `}
-                              >
-                                {STATUS_OPTIONS.find(o => o.value === (job.status === 'interviewing' ? 'interview' : job.status === 'offered' ? 'completed' : job.status))?.label || job.status}
-                                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${openStatusDropdownId === job._id ? 'rotate-180' : ''}`} />
-                              </button>
-
-                              <AnimatePresence>
-                                {openStatusDropdownId === job._id && (
-                                  <motion.div
-                                    initial={{ opacity: 0, y: 5, scale: 0.95 }}
-                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    exit={{ opacity: 0, y: 5, scale: 0.95 }}
-                                    transition={{ duration: 0.15 }}
-                                    className="absolute right-0 top-full mt-1.5 w-36 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-20"
-                                  >
-                                    <div className="flex flex-col py-1">
-                                      {STATUS_OPTIONS.map((opt) => (
-                                        <button
-                                          key={opt.value}
-                                          onClick={() => {
-                                            handleUpdateStatus(job._id, opt.value);
-                                            setOpenStatusDropdownId(null);
-                                          }}
-                                          className={`text-left flex items-center gap-2 px-3 py-2 text-[11px] font-bold transition-colors w-full
-                                              ${(job.status === 'interviewing' ? 'interview' : job.status === 'offered' ? 'completed' : job.status) === opt.value
-                                              ? 'bg-zinc-50 dark:bg-zinc-800/50 text-indigo-600 dark:text-indigo-400'
-                                              : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-zinc-200'
-                                            }
-                                            `}
-                                        >
-                                          <span className={`w-2 h-2 rounded-full ${opt.color.split(' ')[0]}`} />
-                                          {opt.label}
-                                        </button>
-                                      ))}
-                                    </div>
-                                  </motion.div>
-                                )}
-                              </AnimatePresence>
-                            </div>
-
-
-                            {companyId ? (
-                              <Link
-                                to={`/company/${companyId}`}
-                                className="p-2 rounded-xl border border-zinc-200 hover:border-indigo-200/50 bg-white hover:bg-indigo-50/40 text-zinc-600 hover:text-indigo-600 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:!bg-indigo-950/30 dark:hover:!border-indigo-900/40 dark:hover:!text-indigo-400 transition-all cursor-pointer duration-200 flex items-center justify-center"
-                                title="View Database Details"
-                              >
-                                <ExternalLink className="h-4 w-4" />
-                              </Link>
-                            ) : (
-                              <button
-                                onClick={() => {
-                                  showToast(`Company details not indexed. Run an analysis on the Home page for "${job.companyName}".`, 'info');
-                                }}
-                                className="p-2 rounded-xl border border-zinc-200 bg-zinc-100 opacity-60 text-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 flex items-center justify-center cursor-not-allowed"
-                                title="Details not analyzed yet"
-                              >
-                                <AlertCircle className="h-4 w-4" />
-                              </button>
-                            )}
-
-                            <button
-                              onClick={(e) => handleDeleteApplied(job._id, e)}
-                              className="p-2 rounded-xl border border-red-200 hover:border-red-300 bg-white hover:bg-red-50 text-red-500 dark:border-red-950/50 dark:bg-zinc-900 dark:hover:bg-red-950/20 transition-all cursor-pointer duration-200"
-                              title="Delete Log"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
+                  <div className="space-y-8">
+                    {visibleGroupedJobs.map((group, groupIdx) => (
+                      <div key={groupIdx} className="space-y-4">
+                        <div className="flex items-center gap-3">
+                          <h4 className="text-sm font-black text-zinc-800 dark:text-zinc-100 uppercase tracking-wider">{group.dateStr}</h4>
+                          <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800"></div>
                         </div>
-                      );
-                    })}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                          {group.jobs.map((job) => {
+                            const matchScore = calculateMatchScore(job.companyName);
+                            return (
+                              <div
+                                key={job._id}
+                                className="p-5 rounded-2xl bg-white border border-zinc-200 dark:bg-zinc-900 dark:border-zinc-800 shadow-sm flex flex-col justify-between gap-4 group hover:border-indigo-500/40 transition-all"
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="space-y-2 min-w-0 flex-1">
+                                    <div className="flex items-start justify-between gap-3">
+                                      <span className="inline-flex text-[10px] font-bold px-2 py-0.5 rounded-md bg-zinc-50 border border-zinc-150 text-zinc-650 dark:bg-zinc-950/60 dark:border-zinc-800/80 dark:text-zinc-400 items-center gap-1">
+                                        Match Score:
+                                        <b className="text-indigo-600 dark:text-indigo-400">{matchScore}%</b>
+                                      </span>
+
+                                      <button
+                                        onClick={(e) => handleDeleteCompany(job._id, e)}
+                                        className="p-1.5 -m-1.5 rounded-xl text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all cursor-pointer shrink-0"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </button>
+                                    </div>
+
+                                    <h4 className="text-sm font-bold text-zinc-800 dark:text-zinc-100 line-clamp-2 mt-1">
+                                      {job.jobTitle}
+                                    </h4>
+
+                                    <p className="text-xs text-zinc-450 dark:text-zinc-500 font-semibold line-clamp-2">
+                                      {job.companyName}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800/60 flex items-center justify-between">
+                                  <Link
+                                    to={`/company/${job._id}`}
+                                    className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 w-full"
+                                    title="View Database Details"
+                                  >
+                                    <ExternalLink className="h-3.5 w-3.5" />
+                                    View Details
+                                  </Link>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+
+                    {visibleGroupedJobs.reduce((acc, g) => acc + g.jobs.length, 0) < groupedJobs.reduce((acc, g) => acc + g.jobs.length, 0) && (
+                      <div className="pt-4 flex justify-center">
+                        <button
+                          onClick={handleLoadMore}
+                          className="px-6 py-2.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-xl text-xs font-bold transition-all flex items-center gap-2"
+                        >
+                          Load More Jobs
+                          <ArrowRight className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -668,44 +825,60 @@ export const Dashboard: React.FC = () => {
                     </Link>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {resumes.map((res) => (
-                      <div
-                        key={res._id}
-                        className="p-5 rounded-2xl bg-white border border-zinc-200 dark:bg-zinc-900 dark:border-zinc-800 shadow-sm flex flex-col justify-between gap-4 group hover:border-indigo-500/40 transition-all"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="space-y-1.5 min-w-0">
-                            <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-purple-50 text-purple-650 dark:bg-purple-950/40 dark:text-purple-400">
-                              PDF Document
-                            </span>
-                            <h4 className="text-sm font-bold text-zinc-800 dark:text-zinc-100 truncate mt-1">
-                              {res.name}
-                            </h4>
-                            <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-semibold">
-                              Registered on {new Date(res.createdAt).toLocaleDateString()}
-                            </p>
-                          </div>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {resumes
+                        .filter(res => {
+                          if (resumeFilter === 'all') return true;
+                          const resFormat = res.format || 'pdf'; // Default old resumes to pdf
+                          return resFormat === resumeFilter;
+                        })
+                        .filter(res => res.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                        .map((res) => {
+                          const resFormat = res.format || 'pdf';
+                          return (
+                            <div
+                              key={res._id}
+                              className="p-5 rounded-2xl bg-white border border-zinc-200 dark:bg-zinc-900 dark:border-zinc-800 shadow-sm flex flex-col justify-between gap-4 group hover:border-indigo-500/40 transition-all"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="space-y-1.5 min-w-0">
+                                  <h4 className="text-sm font-bold text-zinc-800 dark:text-zinc-100 truncate mt-1">
+                                    {res.name}
+                                  </h4>
+                                  <div className="flex items-center gap-2 flex-wrap mt-1">
+                                    <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-semibold">
+                                      Registered on {new Date(res.createdAt).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'numeric', day: 'numeric' })}
+                                    </p>
+                                    {res.atsScore !== undefined && res.atsScore > 0 && (
+                                      <span className="inline-flex text-[9px] font-bold px-1.5 py-0.5 rounded bg-zinc-50 border border-zinc-200 text-zinc-600 dark:bg-zinc-950/60 dark:border-zinc-800/80 dark:text-zinc-400 items-center gap-1">
+                                        ATS Score: <b className="text-indigo-600 dark:text-indigo-400">{res.atsScore}%</b>
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
 
-                          <button
-                            onClick={(e) => handleDeleteResume(res._id, e)}
-                            className="p-2 rounded-xl text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all cursor-pointer shrink-0"
-                          >
-                            <Trash2 className="h-4.5 w-4.5" />
-                          </button>
-                        </div>
+                                <button
+                                  onClick={(e) => handleDeleteResume(res._id, e)}
+                                  className="p-2 rounded-xl text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all cursor-pointer shrink-0"
+                                >
+                                  <Trash2 className="h-4.5 w-4.5" />
+                                </button>
+                              </div>
 
-                        <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800/60 flex items-center justify-between">
-                          <Link
-                            to="/resume-builder"
-                            className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
-                          >
-                            View & Rephrase Bullets
-                            <ArrowRight className="h-3 w-3" />
-                          </Link>
-                        </div>
-                      </div>
-                    ))}
+                              <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800/60 flex items-center justify-between">
+                                <Link
+                                  to="/resume-builder"
+                                  className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                                >
+                                  View & Rephrase Bullets
+                                  <ArrowRight className="h-3 w-3" />
+                                </Link>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
                   </div>
                 )}
               </div>
@@ -784,6 +957,56 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {deleteModal.isOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setDeleteModal(prev => ({ ...prev, isOpen: false }))}
+              className="absolute inset-0 bg-zinc-900/40 dark:bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              className="relative w-full max-w-sm overflow-hidden rounded-2xl bg-white p-6 text-left shadow-2xl dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800"
+            >
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-full bg-red-100 dark:bg-red-900/30">
+                  <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-500" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100 mb-1">
+                    {deleteModal.title}
+                  </h3>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    {deleteModal.message}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  onClick={() => setDeleteModal(prev => ({ ...prev, isOpen: false }))}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-zinc-700 bg-zinc-100 hover:bg-zinc-200 dark:text-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 };
