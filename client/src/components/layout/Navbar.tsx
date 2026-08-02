@@ -50,7 +50,7 @@ export const Navbar: React.FC = () => {
 
           {/* Desktop Links (Authenticated) */}
           {user && (
-            <div className="hidden xl:flex items-center space-x-2">
+            <div className="hidden lg:flex items-center space-x-2">
               {authLinks.map((link) => {
                 const Icon = link.icon;
                 return (
@@ -71,7 +71,7 @@ export const Navbar: React.FC = () => {
           )}
 
           {/* Actions (Theme toggle, auth CTAs) */}
-          <div className="hidden xl:flex items-center space-x-3">
+          <div className="hidden lg:flex items-center space-x-3">
             <button
               onClick={toggleTheme}
               className="p-2.5 rounded-xl border border-zinc-200 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900 transition-all duration-200 text-zinc-600 dark:text-zinc-400"
@@ -150,7 +150,7 @@ export const Navbar: React.FC = () => {
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="flex xl:hidden items-center space-x-2">
+          <div className="flex lg:hidden items-center space-x-2">
             <button
               onClick={toggleTheme}
               className="p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400"
@@ -176,7 +176,7 @@ export const Navbar: React.FC = () => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="xl:hidden border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 overflow-hidden"
+            className="lg:hidden border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 overflow-hidden"
           >
             <div className="space-y-1.5 px-4 py-4">
               {user ? (

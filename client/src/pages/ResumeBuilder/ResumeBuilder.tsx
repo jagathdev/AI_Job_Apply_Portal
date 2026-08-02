@@ -797,12 +797,10 @@ export const ResumeBuilder: React.FC = () => {
           <div className="flex flex-col items-center justify-center py-20 px-4 border border-zinc-200 dark:border-zinc-800 rounded-2xl border-dashed bg-white dark:bg-zinc-900 text-center shadow-sm">
             <Upload className="h-16 w-16 text-indigo-200 dark:text-indigo-900 mb-6" />
             <h3 className="text-xl font-bold text-zinc-800 dark:text-zinc-200 mb-2">Upload your reference resume</h3>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-8 max-w-md">
-              To get started, please upload your core resume. We'll parse it and you can use it to generate tailored versions for any job application.
-            </p>
-            <label className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold cursor-pointer transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:-translate-y-0.5">
-              <Upload className="h-4.5 w-4.5" />
-              {isUploading ? 'Parsing document...' : 'Upload PDF / DOCX Resume'}
+            <div className="flex flex-wrap items-center justify-center gap-3.5 mb-8 max-w-md">
+            <label className="flex items-center justify-center gap-1.5 px-6 py-3 w-48 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold cursor-pointer transition-all shadow-md shadow-indigo-500/10">
+              <Upload className="h-5 w-5" />
+              {isUploading ? 'Parsing...' : 'Upload File'}
               <input
                 type="file"
                 disabled={isUploading}
@@ -811,6 +809,17 @@ export const ResumeBuilder: React.FC = () => {
                 className="hidden"
               />
             </label>
+            <button
+              onClick={handleManualCreate}
+              className="flex items-center justify-center gap-1.5 px-6 py-3 w-48 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold cursor-pointer transition-all"
+            >
+              <FileText className="h-5 w-5" />
+              Quick Draft
+            </button>
+          </div>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-8 max-w-md">
+              To get started, please upload your core resume. We'll parse it and you can use it to generate tailored versions for any job application.
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
