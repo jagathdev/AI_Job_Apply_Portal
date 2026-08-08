@@ -23,7 +23,6 @@ export const Home: React.FC = () => {
     showToast
   } = useApp();
 
-  const [loading, setLoading] = useState(true);
   const [jobInput, setJobInput] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [loadingStage, setLoadingStage] = useState(0);
@@ -41,114 +40,74 @@ export const Home: React.FC = () => {
     'Drafting tailored preparation packages...'
   ];
 
+  const scrollToGuide = () => {
+    guideRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleAnalyze = async (e: React.FormEvent, overrideText?: string) => {
+    e.preventDefault();
+    const textToAnalyze = overrideText || jobInput;
+    if (!textToAnalyze || textToAnalyze.trim().length < 10) {
+      showToast('Please provide a valid job link or detailed job description (min 10 characters).', 'error');
+      return;
+    }
+
+    setIsAnalyzing(true);
+    setLoadingStage(0);
+
+    const stageInterval = setInterval(() => {
+      setLoadingStage((prev) => (prev < loadingStages.length - 1 ? prev + 1 : prev));
+    }, 1800);
+
+    try {
+      const res = await axios.post('/api/company/analyze', { jobInput: textToAnalyze });
+      clearInterval(stageInterval);
+      setIsAnalyzing(false);
+
+      if (res.data) {
+        if (res.data.requiresRoleInput) {
+          setShowBlockModal(true);
+          return;
+        }
+
+        setActiveCompany(res.data);
+        showToast('Job description analyzed successfully!', 'success');
+        setJobInput('');
+        navigate(`/company/${res.data._id || res.data.id}`);
+      }
+    } catch (err: any) {
+      clearInterval(stageInterval);
+      setIsAnalyzing(false);
+      console.error('Job analysis failed:', err);
+      const msg = err.response?.data?.message || err.response?.data?.error || 'Failed to analyze job description. Please try again.';
+      showToast(msg, 'error');
+    }
+  };
+
   useEffect(() => {
     loadStatsAndContext();
   }, []);
 
   const loadStatsAndContext = async () => {
-    setLoading(true);
-    await refreshDashboardStats();
-
-    // Attempt to pull latest resume from DB if context cache is empty
-    try {
-      const res = await axios.get('/api/resume/all');
-      if (res.data.length > 0 && !activeResume) {
-        setActiveResume(res.data[0]);
-      }
-    } catch (err) {
-      console.error('Failed to pre-fetch resumes:', err);
-    }
-
-    // Attempt to pull latest analyzed company/job from DB if context cache is empty
-    try {
-      const companyRes = await axios.get('/api/company/all');
-      if (companyRes.data.length > 0 && !activeCompany) {
-        setActiveCompany(companyRes.data[0]);
-      }
-    } catch (err) {
-      console.error('Failed to pre-fetch companies:', err);
-    }
-
-    setLoading(false);
+    // Run stats, resume, and company pre-fetches concurrently in background without blocking Home UI
+    Promise.all([
+      refreshDashboardStats().catch(err => console.error('Failed to fetch stats:', err)),
+      axios.get('/api/resume/all')
+        .then(res => {
+          if (res.data && res.data.length > 0 && !activeResume) {
+            setActiveResume(res.data[0]);
+          }
+        })
+        .catch(err => console.error('Failed to pre-fetch resumes:', err)),
+      axios.get('/api/company/all')
+        .then(res => {
+          if (res.data && res.data.length > 0 && !activeCompany) {
+            setActiveCompany(res.data[0]);
+          }
+        })
+        .catch(err => console.error('Failed to pre-fetch companies:', err))
+    ]);
   };
-
-  const triggerLoaderCycle = (stopRef: { current: boolean }) => {
-    setLoadingStage(0);
-    const interval = setInterval(() => {
-      if (stopRef.current) {
-        clearInterval(interval);
-        return;
-      }
-      setLoadingStage((prev) => (prev + 1) % loadingStages.length);
-    }, 2800);
-    return interval;
-  };
-
-  const handleAnalyze = async (e: React.FormEvent, overrideInput?: string) => {
-    e.preventDefault();
-
-    const body: any = {};
-    const inputVal = (overrideInput || jobInput).trim();
-
-    if (!inputVal) {
-      showToast('Please enter a job URL or paste the job description text.', 'error');
-      return;
-    }
-
-    if (inputVal.match(/^https?:\/\/[^\s]+$/)) {
-      body.jdUrl = inputVal;
-    } else {
-      if (inputVal.length < 100) {
-        showToast('Please enter a job description of at least 100 characters.', 'error');
-        return;
-      }
-      body.jdText = inputVal;
-    }
-
-    setIsAnalyzing(true);
-    const stopRef = { current: false };
-    const loaderInterval = triggerLoaderCycle(stopRef);
-
-    try {
-      const res = await axios.post('/api/company/analyze', body);
-      stopRef.current = true;
-      clearInterval(loaderInterval);
-
-      setActiveCompany(res.data.company);
-      showToast('AI Job Analysis completed successfully!', 'success');
-      await refreshDashboardStats();
-      navigate(`/company/${res.data.company._id || res.data.company.id}`);
-    } catch (err: any) {
-      stopRef.current = true;
-      clearInterval(loaderInterval);
-
-      const isUrlRequest = !!body.jdUrl;
-      const isBlocked = err.response?.data?.code === 'SCRAPE_BLOCKED' || (isUrlRequest && err.response?.status === 400);
-
-      if (isBlocked && isUrlRequest) {
-        setShowBlockModal(true);
-      } else {
-        showToast(err.response?.data?.error || 'AI analysis timed out or failed.', 'error');
-      }
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  const scrollToGuide = () => {
-    guideRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  if (loading) {
-    return (
-      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-zinc-50 dark:bg-zinc-950">
-        <div className="text-center space-y-4">
-          <div className="h-10 w-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">Assembling your workspace...</p>
-        </div>
-      </div>
-    );
-  }
 
   const completionPercentage = user?.profileCompletion || 30;
   const isResumeUploaded = !!activeResume;

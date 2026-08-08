@@ -6,7 +6,7 @@ import axios from 'axios';
 import { User, Mail, Phone, Lock, Sparkles, ArrowRight, Eye, EyeOff } from 'lucide-react';
 
 export const Register: React.FC = () => {
-  const { showToast, setIsLoading, isLoading } = useApp();
+  const { showToast } = useApp();
   const navigate = useNavigate();
 
   const [name, setName] = useState('');
@@ -17,6 +17,7 @@ export const Register: React.FC = () => {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Validate password strength: min 8 chars, 1 uppercase, 1 lowercase, 1 number
   const isPasswordStrong = (pass: string) => {
@@ -56,7 +57,7 @@ export const Register: React.FC = () => {
       return;
     }
 
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
       const res = await axios.post('/api/auth/register', {
         name: name.trim(),
@@ -73,7 +74,7 @@ export const Register: React.FC = () => {
       console.error(err);
       showToast(err.response?.data?.error || 'Registration failed.', 'error');
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -272,13 +273,13 @@ export const Register: React.FC = () => {
               {/* Submit CTA */}
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isSubmitting}
                 className="group relative flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 py-3.5 text-sm font-bold text-white shadow-xl shadow-indigo-500/20 hover:shadow-indigo-500/40 hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50 transition-all mt-6 cursor-pointer overflow-hidden border border-indigo-400/20"
               >
                 <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
                 <span className="relative z-10 flex items-center gap-2">
-                  {isLoading ? 'Creating account...' : 'Register Account'}
-                  {!isLoading && <ArrowRight className="h-4.5 w-4.5 transition-transform group-hover:translate-x-1" />}
+                  {isSubmitting ? 'Creating account...' : 'Register Account'}
+                  {!isSubmitting && <ArrowRight className="h-4.5 w-4.5 transition-transform group-hover:translate-x-1" />}
                 </span>
               </button>
             </form>

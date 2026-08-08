@@ -47,6 +47,11 @@ export const ResumeBuilder: React.FC = () => {
   const [atsReport, setAtsReport] = useState<any | null>(null);
   const hasFetchedATS = useRef(false);
 
+  // 10-second Auto-Save state & refs
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
+  const isInitialLoad = useRef(true);
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     if (activeResume && activeCompany && !hasFetchedATS.current) {
       hasFetchedATS.current = true;
@@ -62,6 +67,9 @@ export const ResumeBuilder: React.FC = () => {
 
   useEffect(() => {
     if (activeResume) {
+      isInitialLoad.current = true;
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+      setSaveStatus('saved');
       setEditorState({
         personalInfo: activeResume.personalInfo || { fullName: '', targetRole: '', email: '', phone: '', location: '', website: '', linkedIn: '', github: '' },
         summary: activeResume.summary || '',
@@ -77,6 +85,42 @@ export const ResumeBuilder: React.FC = () => {
       calculateMockATSMetrics(activeResume);
     }
   }, [activeResume]);
+
+  // 10-second Auto-Save effect when editorState changes
+  useEffect(() => {
+    if (isInitialLoad.current) {
+      isInitialLoad.current = false;
+      return;
+    }
+
+    if (!activeResume?._id) return;
+
+    setSaveStatus('unsaved');
+
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
+    autoSaveTimerRef.current = setTimeout(async () => {
+      try {
+        setSaveStatus('saving');
+        const res = await axios.put(`/api/resume/${activeResume._id}`, editorState);
+        setActiveResume(res.data.resume);
+        setResumes(prev => prev.map(r => r._id === res.data.resume._id ? res.data.resume : r));
+        setSaveStatus('saved');
+        showToast('Resume changes auto-saved.', 'success');
+      } catch (err) {
+        console.error('Auto-save error:', err);
+        setSaveStatus('unsaved');
+      }
+    }, 10000);
+
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [editorState]);
 
   // Clean legacy AI data to strip "SITUATION: TASK: ACTION: RESULT:" keywords seamlessly
   useEffect(() => {
@@ -244,12 +288,18 @@ export const ResumeBuilder: React.FC = () => {
 
   const handleSaveEditor = async () => {
     if (!activeResume) return;
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+    setSaveStatus('saving');
     try {
       const res = await axios.put(`/api/resume/${activeResume._id}`, editorState);
       setActiveResume(res.data.resume);
       setResumes(prev => prev.map(r => r._id === res.data.resume._id ? res.data.resume : r));
+      setSaveStatus('saved');
       showToast('Resume changes saved successfully!', 'success');
     } catch (err) {
+      setSaveStatus('unsaved');
       showToast('Failed to save changes.', 'error');
     }
   };
@@ -266,9 +316,27 @@ export const ResumeBuilder: React.FC = () => {
         customJdText: activeCompany ? null : pastedJd
       });
 
-      setActiveResume(res.data.resume);
-      setResumes(prev => [res.data.resume, ...prev]);
+      const newTailoredResume = res.data.resume;
+      setActiveResume(newTailoredResume);
+      setResumes(prev => [newTailoredResume, ...prev]);
       showToast('ATS-Optimized tailored resume created!', 'success');
+
+      // Automatically re-run ATS check to get updated ATS score instantly
+      if (activeCompany && newTailoredResume?._id) {
+        setLoadingATS(true);
+        try {
+          const atsRes = await axios.post('/api/ats/analyze', {
+            resumeId: newTailoredResume._id,
+            companyId: activeCompany._id
+          });
+          setAtsReport(atsRes.data.report || atsRes.data);
+          showToast('ATS Score calculated automatically!', 'success');
+        } catch (atsErr) {
+          console.error('Auto ATS check error:', atsErr);
+        } finally {
+          setLoadingATS(false);
+        }
+      }
     } catch (err: any) {
       showToast(err.response?.data?.error || 'AI tailoring timed out.', 'error');
     } finally {
@@ -321,13 +389,15 @@ export const ResumeBuilder: React.FC = () => {
     });
   };
 
-  const handleApplyBullet = (comp: any, idx: number) => {
+  const handleApplyBullet = async (comp: any, idx: number) => {
     setAtsReport((prev: any) => {
       if (!prev) return prev;
-      const list = [...prev.bulletPointComparisons];
+      const list = [...(prev.bulletPointComparisons || [])];
       list[idx] = { ...list[idx], applied: true };
       return { ...prev, bulletPointComparisons: list };
     });
+
+    let updatedState: any = null;
 
     setEditorState((prev: any) => {
       const newState = { ...prev };
@@ -335,7 +405,6 @@ export const ResumeBuilder: React.FC = () => {
         if (newState.experience[comp.index] && newState.experience[comp.index].description) {
           newState.experience[comp.index].description = newState.experience[comp.index].description.replace(comp.original, comp.suggested);
         } else {
-          // Fallback if comp.index doesn't match accurately: just search all descriptions
           for (let i = 0; i < newState.experience.length; i++) {
             if (newState.experience[i].description && newState.experience[i].description.includes(comp.original)) {
               newState.experience[i].description = newState.experience[i].description.replace(comp.original, comp.suggested);
@@ -355,10 +424,24 @@ export const ResumeBuilder: React.FC = () => {
           }
         }
       }
+      updatedState = newState;
       return newState;
     });
 
-    showToast('Resume updated with STAR-optimized bullet!', 'success');
+    // Save directly to MongoDB database right away
+    if (activeResume && updatedState) {
+      try {
+        setSaveStatus('saving');
+        const res = await axios.put(`/api/resume/${activeResume._id}`, updatedState);
+        setActiveResume(res.data.resume);
+        setSaveStatus('saved');
+        showToast('AI phrasing adopted & saved to resume!', 'success');
+      } catch (err) {
+        showToast('AI phrasing adopted into resume!', 'success');
+      }
+    } else {
+      showToast('AI phrasing adopted into resume!', 'success');
+    }
   };
 
   const updatePersonalInfo = (field: string, value: string) => {
@@ -1162,13 +1245,31 @@ export const ResumeBuilder: React.FC = () => {
               </div>
 
               {/* Quick Action bar to save editors to database */}
-              <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-end">
+              <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+                <div className="text-xs">
+                  {saveStatus === 'saving' && (
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold flex items-center gap-1.5 animate-pulse">
+                      <RefreshCw className="h-3.5 w-3.5 animate-spin" /> Saving changes...
+                    </span>
+                  )}
+                  {saveStatus === 'unsaved' && (
+                    <span className="text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-amber-500 animate-ping" /> Auto-saving in 10s...
+                    </span>
+                  )}
+                  {saveStatus === 'saved' && (
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1.5">
+                      <CheckCircle2 className="h-3.5 w-3.5" /> All changes saved
+                    </span>
+                  )}
+                </div>
                 <button
                   onClick={handleSaveEditor}
-                  className="flex items-center gap-1.5 px-4.5 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-md transition-all cursor-pointer"
+                  disabled={saveStatus === 'saving'}
+                  className="flex items-center gap-1.5 px-4.5 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-md transition-all cursor-pointer disabled:opacity-50"
                 >
                   <Save className="h-4 w-4" />
-                  Save Resume Edits
+                  Save Now
                 </button>
               </div>
 
@@ -1230,14 +1331,37 @@ export const ResumeBuilder: React.FC = () => {
                   )}
                 </div>
 
-                <button
-                  onClick={handleTailorResume}
-                  disabled={isTailoring || (!activeCompany && !pastedJd)}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 hover:from-indigo-500 hover:via-purple-500 hover:to-pink-400 py-3 text-xs font-bold text-white shadow-lg shadow-indigo-500/20 disabled:opacity-40 transition-all cursor-pointer hover:shadow-indigo-500/40 hover:-translate-y-0.5"
-                >
-                  <Brain className={`h-4.5 w-4.5 ${isTailoring ? 'animate-spin' : 'animate-pulse'}`} />
-                  {isTailoring ? 'Tailoring with AI...' : 'Add ATS Keywords'}
-                </button>
+                {(() => {
+                  const isAlreadyTailored = activeResume?.name?.toLowerCase().includes('ats') || activeResume?.name?.toLowerCase().includes('tailored');
+                  return (
+                    <button
+                      onClick={handleTailorResume}
+                      disabled={isTailoring || isAlreadyTailored || (!activeCompany && !pastedJd)}
+                      className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-xs font-bold transition-all ${
+                        isAlreadyTailored
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 cursor-not-allowed opacity-80'
+                          : 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 hover:from-indigo-500 hover:via-purple-500 hover:to-pink-400 text-white shadow-lg shadow-indigo-500/20 disabled:opacity-40 cursor-pointer hover:shadow-indigo-500/40 hover:-translate-y-0.5'
+                      }`}
+                    >
+                      {isTailoring ? (
+                        <>
+                          <Brain className="h-4.5 w-4.5 animate-spin" />
+                          Tailoring with AI...
+                        </>
+                      ) : isAlreadyTailored ? (
+                        <>
+                          <CheckCircle2 className="h-4.5 w-4.5 text-emerald-500" />
+                          ATS Keywords Added ✓
+                        </>
+                      ) : (
+                        <>
+                          <Brain className="h-4.5 w-4.5 animate-pulse" />
+                          Add ATS Keywords
+                        </>
+                      )}
+                    </button>
+                  );
+                })()}
 
                 <p className="text-[10px] text-center text-zinc-500 mt-4 leading-relaxed">
                   Clicking this will automatically rewrite your experience bullet points to match the JD, seamlessly adding any missing keywords, closing the gap, and boosting your ATS score instantly.

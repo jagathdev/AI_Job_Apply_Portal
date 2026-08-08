@@ -4,7 +4,7 @@ import mongoose, { Schema } from 'mongoose';
 const UserSchema = new Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true, index: true },
-  mobile: { type: String, required: true },
+  mobile: { type: String, required: true, index: true },
   password: { type: String, required: true },
   profileCompletion: { type: Number, default: 20 },
   createdAt: { type: Date, default: Date.now },

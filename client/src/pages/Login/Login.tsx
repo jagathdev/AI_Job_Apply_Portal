@@ -6,12 +6,13 @@ import axios from 'axios';
 import { Lock, Mail, ArrowRight, Sparkles, Eye, EyeOff } from 'lucide-react';
 
 export const Login: React.FC = () => {
-  const { loginUser, showToast, setIsLoading, isLoading } = useApp();
+  const { loginUser, showToast } = useApp();
   const navigate = useNavigate();
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,7 +21,7 @@ export const Login: React.FC = () => {
       return;
     }
 
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
       const res = await axios.post(`/api/auth/login`, {
         identifier: identifier.trim(),
@@ -31,9 +32,9 @@ export const Login: React.FC = () => {
       navigate('/home');
     } catch (err: any) {
       console.error(err);
-      showToast(err.response?.data?.error || 'Inxvalid credentials or connection issue.', 'error');
+      showToast(err.response?.data?.error || 'Invalid credentials or connection issue.', 'error');
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -159,13 +160,13 @@ export const Login: React.FC = () => {
               {/* Submit CTA */}
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isSubmitting}
                 className="group relative flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 py-3.5 text-sm font-bold text-white shadow-xl shadow-indigo-500/20 hover:shadow-indigo-500/40 hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50 transition-all mt-8 cursor-pointer overflow-hidden border border-indigo-400/20"
               >
                 <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
                 <span className="relative z-10 flex items-center gap-2">
-                  {isLoading ? 'Checking credentials...' : 'Login to Account'}
-                  {!isLoading && <ArrowRight className="h-4.5 w-4.5 transition-transform group-hover:translate-x-1" />}
+                  {isSubmitting ? 'Checking credentials...' : 'Login to Account'}
+                  {!isSubmitting && <ArrowRight className="h-4.5 w-4.5 transition-transform group-hover:translate-x-1" />}
                 </span>
               </button>
             </form>
