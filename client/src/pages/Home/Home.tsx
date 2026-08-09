@@ -59,21 +59,33 @@ export const Home: React.FC = () => {
       setLoadingStage((prev) => (prev < loadingStages.length - 1 ? prev + 1 : prev));
     }, 1800);
 
+    const cleanedText = textToAnalyze.trim();
+    // Extract actual URL if string contains http(s)://
+    const urlMatch = cleanedText.match(/https?:\/\/[^\s]+/i);
+    const extractedUrl = urlMatch ? urlMatch[0] : undefined;
+
+    const payload = {
+      jobInput: cleanedText,
+      jdText: extractedUrl ? undefined : cleanedText,
+      jdUrl: extractedUrl,
+    };
+
     try {
-      const res = await axios.post('/api/company/analyze', { jobInput: textToAnalyze });
+      const res = await axios.post('/api/company/analyze', payload);
       clearInterval(stageInterval);
       setIsAnalyzing(false);
 
       if (res.data) {
-        if (res.data.requiresRoleInput) {
+        const companyData = res.data.company || res.data;
+        if (companyData.requiresRoleInput) {
           setShowBlockModal(true);
           return;
         }
 
-        setActiveCompany(res.data);
+        setActiveCompany(companyData);
         showToast('Job description analyzed successfully!', 'success');
         setJobInput('');
-        navigate(`/company/${res.data._id || res.data.id}`);
+        navigate(`/company/${companyData._id || companyData.id}`);
       }
     } catch (err: any) {
       clearInterval(stageInterval);

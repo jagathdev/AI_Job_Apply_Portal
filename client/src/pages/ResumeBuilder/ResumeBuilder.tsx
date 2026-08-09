@@ -45,6 +45,7 @@ export const ResumeBuilder: React.FC = () => {
   // Integrated ATS Scanner State
   const [loadingATS, setLoadingATS] = useState(false);
   const [atsReport, setAtsReport] = useState<any | null>(null);
+  const [dismissedKeywords, setDismissedKeywords] = useState<string[]>([]);
   const hasFetchedATS = useRef(false);
 
   // 10-second Auto-Save state & refs
@@ -113,7 +114,7 @@ export const ResumeBuilder: React.FC = () => {
         console.error('Auto-save error:', err);
         setSaveStatus('unsaved');
       }
-    }, 10000);
+    }, 5000);
 
     return () => {
       if (autoSaveTimerRef.current) {
@@ -364,71 +365,102 @@ export const ResumeBuilder: React.FC = () => {
   };
 
   const handleAddKeyword = (keyword: string) => {
+    const kwLower = keyword.toLowerCase().trim();
+    setDismissedKeywords(prev => [...prev, kwLower]);
     setEditorState((prev: any) => {
       const currentSkills = prev.skills || [];
-      if (currentSkills.includes(keyword)) return prev;
+      if (currentSkills.some((s: string) => s.toLowerCase().trim() === kwLower)) return prev;
       return { ...prev, skills: [...currentSkills, keyword] };
     });
     setAtsReport((prev: any) => {
       if (!prev) return prev;
       return {
         ...prev,
-        missingKeywords: prev.missingKeywords.filter((k: string) => k !== keyword)
+        missingKeywords: (prev.missingKeywords || []).filter((k: string) => k.toLowerCase().trim() !== kwLower)
       };
     });
     showToast(`Added ${keyword} to skills!`, 'success');
   };
 
   const handleDismissKeyword = (keyword: string) => {
+    const kwLower = keyword.toLowerCase().trim();
+    setDismissedKeywords(prev => [...prev, kwLower]);
     setAtsReport((prev: any) => {
       if (!prev) return prev;
       return {
         ...prev,
-        missingKeywords: prev.missingKeywords.filter((k: string) => k !== keyword)
+        missingKeywords: (prev.missingKeywords || []).filter((k: string) => k.toLowerCase().trim() !== kwLower)
       };
     });
   };
 
-  const handleApplyBullet = async (comp: any, idx: number) => {
+  const handleApplyBullet = async (comp: any) => {
     setAtsReport((prev: any) => {
       if (!prev) return prev;
-      const list = [...(prev.bulletPointComparisons || [])];
-      list[idx] = { ...list[idx], applied: true };
+      const list = (prev.bulletPointComparisons || []).map((item: any) => {
+        if (item === comp || (item.suggested && item.suggested === comp.suggested)) {
+          return { ...item, applied: true };
+        }
+        return item;
+      });
       return { ...prev, bulletPointComparisons: list };
     });
 
     let updatedState: any = null;
 
     setEditorState((prev: any) => {
-      const newState = { ...prev };
-      if (comp.section === 'experience' && Array.isArray(newState.experience)) {
-        if (newState.experience[comp.index] && newState.experience[comp.index].description) {
-          newState.experience[comp.index].description = newState.experience[comp.index].description.replace(comp.original, comp.suggested);
-        } else {
+      const newState = JSON.parse(JSON.stringify(prev));
+      let isApplied = false;
+
+      if (Array.isArray(newState.experience) && newState.experience.length > 0) {
+        if (typeof comp.index === 'number' && newState.experience[comp.index]?.description) {
+          const desc = newState.experience[comp.index].description;
+          if (comp.original && desc.includes(comp.original)) {
+            newState.experience[comp.index].description = desc.replace(comp.original, comp.suggested);
+            isApplied = true;
+          }
+        }
+
+        if (!isApplied && comp.original) {
           for (let i = 0; i < newState.experience.length; i++) {
-            if (newState.experience[i].description && newState.experience[i].description.includes(comp.original)) {
-              newState.experience[i].description = newState.experience[i].description.replace(comp.original, comp.suggested);
+            const desc = newState.experience[i].description || '';
+            if (desc.includes(comp.original)) {
+              newState.experience[i].description = desc.replace(comp.original, comp.suggested);
+              isApplied = true;
               break;
             }
           }
         }
-      } else if (comp.section === 'projects' && Array.isArray(newState.projects)) {
-        if (newState.projects[comp.index] && newState.projects[comp.index].description) {
-          newState.projects[comp.index].description = newState.projects[comp.index].description.replace(comp.original, comp.suggested);
-        } else {
-          for (let i = 0; i < newState.projects.length; i++) {
-            if (newState.projects[i].description && newState.projects[i].description.includes(comp.original)) {
-              newState.projects[i].description = newState.projects[i].description.replace(comp.original, comp.suggested);
-              break;
+
+        if (!isApplied && comp.original) {
+          const words = comp.original.split(/\s+/).slice(0, 5).join(' ');
+          if (words && words.length > 10) {
+            for (let i = 0; i < newState.experience.length; i++) {
+              const desc = newState.experience[i].description || '';
+              if (desc.includes(words)) {
+                newState.experience[i].description = desc + '\n• ' + comp.suggested;
+                isApplied = true;
+                break;
+              }
             }
           }
         }
+
+        if (!isApplied && newState.experience[0]) {
+          const desc = newState.experience[0].description || '';
+          newState.experience[0].description = desc ? `${desc}\n• ${comp.suggested}` : comp.suggested;
+          isApplied = true;
+        }
+      } else if (Array.isArray(newState.projects) && newState.projects.length > 0) {
+        const desc = newState.projects[0].description || '';
+        newState.projects[0].description = desc ? `${desc}\n• ${comp.suggested}` : comp.suggested;
+        isApplied = true;
       }
+
       updatedState = newState;
       return newState;
     });
 
-    // Save directly to MongoDB database right away
     if (activeResume && updatedState) {
       try {
         setSaveStatus('saving');
@@ -452,10 +484,35 @@ export const ResumeBuilder: React.FC = () => {
   };
 
   const addArrayItem = (field: 'experience' | 'education' | 'projects', template: any) => {
-    setEditorState((prev: any) => ({
-      ...prev,
-      [field]: [...prev[field], template]
-    }));
+    let newIndex = 0;
+    setEditorState((prev: any) => {
+      const arr = prev[field] || [];
+      newIndex = arr.length;
+      return {
+        ...prev,
+        [field]: [...arr, template]
+      };
+    });
+
+    setTimeout(() => {
+      const targetId = `${field}-input-${newIndex}`;
+      const inputEl = document.getElementById(targetId) as HTMLInputElement;
+      if (inputEl) {
+        inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        inputEl.focus();
+        inputEl.select();
+      } else {
+        const blockEl = document.getElementById(`${field}-block-${newIndex}`);
+        if (blockEl) {
+          blockEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          const firstInput = blockEl.querySelector('input') as HTMLInputElement;
+          if (firstInput) {
+            firstInput.focus();
+            firstInput.select();
+          }
+        }
+      }
+    }, 120);
   };
 
   const updateArrayItem = (field: 'experience' | 'education' | 'projects', idx: number, key: string, val: any) => {
@@ -732,18 +789,15 @@ export const ResumeBuilder: React.FC = () => {
       doc.close();
 
       setTimeout(async () => {
-        const element = doc.getElementById('scale-wrapper');
-        if (!element) return;
+        let pageElements = Array.from(doc.querySelectorAll('.page')) as HTMLElement[];
+        if (pageElements.length === 0) {
+          const wrapper = doc.getElementById('scale-wrapper') as HTMLElement;
+          if (wrapper) pageElements = [wrapper];
+        }
+
+        if (pageElements.length === 0) return;
 
         try {
-          const canvas = await html2canvas(element, {
-            scale: 2,
-            useCORS: true,
-            logging: false,
-            backgroundColor: '#ffffff'
-          });
-
-          const imgData = canvas.toDataURL('image/jpeg', 1.0);
           const pdf = new jsPDF({
             orientation: 'portrait',
             unit: 'in',
@@ -751,26 +805,44 @@ export const ResumeBuilder: React.FC = () => {
           });
 
           const pdfWidth = pdf.internal.pageSize.getWidth();
-          const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+          const pdfHeight = pdf.internal.pageSize.getHeight();
 
-          pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+          for (let i = 0; i < pageElements.length; i++) {
+            const el = pageElements[i];
 
-          // Make all links clickable in the generated PDF
-          const links = element.querySelectorAll('a');
-          const elementRect = element.getBoundingClientRect();
-
-          links.forEach(link => {
-            const rect = link.getBoundingClientRect();
-            const x = (rect.left - elementRect.left) * (pdfWidth / elementRect.width);
-            const y = (rect.top - elementRect.top) * (pdfHeight / elementRect.height);
-            const w = rect.width * (pdfWidth / elementRect.width);
-            const h = rect.height * (pdfHeight / elementRect.height);
-
-            const url = link.getAttribute('href');
-            if (url) {
-              pdf.link(x, y, w, h, { url });
+            if (i > 0) {
+              pdf.addPage();
             }
-          });
+
+            const canvas = await html2canvas(el, {
+              scale: 2,
+              useCORS: true,
+              logging: false,
+              backgroundColor: '#ffffff'
+            });
+
+            const imgData = canvas.toDataURL('image/jpeg', 1.0);
+            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+
+            // Make links clickable on this page
+            const links = el.querySelectorAll('a');
+            const elementRect = el.getBoundingClientRect();
+
+            links.forEach(link => {
+              const rect = link.getBoundingClientRect();
+              if (elementRect.width > 0 && elementRect.height > 0) {
+                const x = (rect.left - elementRect.left) * (pdfWidth / elementRect.width);
+                const y = (rect.top - elementRect.top) * (pdfHeight / elementRect.height);
+                const w = rect.width * (pdfWidth / elementRect.width);
+                const h = rect.height * (pdfHeight / elementRect.height);
+
+                const url = link.getAttribute('href');
+                if (url) {
+                  pdf.link(x, y, w, h, { url });
+                }
+              }
+            });
+          }
 
           const roleName = editorState.personalInfo?.targetRole || activeCompany?.jobTitle || '';
           const candidateName = editorState.personalInfo?.fullName || 'Candidate';
@@ -881,25 +953,25 @@ export const ResumeBuilder: React.FC = () => {
             <Upload className="h-16 w-16 text-indigo-200 dark:text-indigo-900 mb-6" />
             <h3 className="text-xl font-bold text-zinc-800 dark:text-zinc-200 mb-2">Upload your reference resume</h3>
             <div className="flex flex-wrap items-center justify-center gap-3.5 mb-8 max-w-md">
-            <label className="flex items-center justify-center gap-1.5 px-6 py-3 w-48 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold cursor-pointer transition-all shadow-md shadow-indigo-500/10">
-              <Upload className="h-5 w-5" />
-              {isUploading ? 'Parsing...' : 'Upload File'}
-              <input
-                type="file"
-                disabled={isUploading}
-                accept=".pdf,.docx"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-            </label>
-            <button
-              onClick={handleManualCreate}
-              className="flex items-center justify-center gap-1.5 px-6 py-3 w-48 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold cursor-pointer transition-all"
-            >
-              <FileText className="h-5 w-5" />
-              Quick Draft
-            </button>
-          </div>
+              <label className="flex items-center justify-center gap-1.5 px-6 py-3 w-48 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold cursor-pointer transition-all shadow-md shadow-indigo-500/10">
+                <Upload className="h-5 w-5" />
+                {isUploading ? 'Parsing...' : 'Upload File'}
+                <input
+                  type="file"
+                  disabled={isUploading}
+                  accept=".pdf,.docx"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+              </label>
+              <button
+                onClick={handleManualCreate}
+                className="flex items-center justify-center gap-1.5 px-6 py-3 w-48 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-bold cursor-pointer transition-all"
+              >
+                <FileText className="h-5 w-5" />
+                Quick Draft
+              </button>
+            </div>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-8 max-w-md">
               To get started, please upload your core resume. We'll parse it and you can use it to generate tailored versions for any job application.
             </p>
@@ -1070,16 +1142,16 @@ export const ResumeBuilder: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => addArrayItem('experience', { company: 'New Company', role: 'Software Engineer', duration: 'Jan 2024 - Present', description: '• Handled production scaling.' })}
-                      className="w-full py-2.5 rounded-xl border border-dashed border-indigo-200 text-indigo-600 dark:border-indigo-900/50 dark:text-indigo-400 hover:bg-indigo-50/50 text-xs font-bold transition-all cursor-pointer"
+                      className="w-full py-3 rounded-xl border border-dashed border-indigo-300 dark:border-indigo-700/60 bg-indigo-50/40 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 dark:hover:text-white hover:border-indigo-600 dark:hover:border-indigo-600 text-xs font-bold shadow-xs hover:shadow-md hover:shadow-indigo-500/20 transition-all duration-200 cursor-pointer active:scale-[0.99]"
                     >
                       + Add Experience Block
                     </button>
 
                     {editorState.experience?.map((exp: any, idx: number) => (
-                      <div key={idx} className="p-4 rounded-xl border border-zinc-150 bg-zinc-50/40 dark:border-zinc-800 dark:bg-zinc-950/40 space-y-3.5 relative">
+                      <div key={idx} id={`experience-block-${idx}`} className="p-4 rounded-xl border border-zinc-150 bg-zinc-50/40 dark:border-zinc-800 dark:bg-zinc-950/40 space-y-3.5 relative transition-all">
                         <button
                           onClick={() => removeArrayItem('experience', idx)}
-                          className="absolute top-3.5 right-3.5 text-zinc-400 hover:text-red-500"
+                          className="absolute top-3.5 right-3.5 text-zinc-400 hover:text-red-500 cursor-pointer"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -1089,9 +1161,10 @@ export const ResumeBuilder: React.FC = () => {
                             <label className="block text-[10px] uppercase font-bold text-zinc-400">Company</label>
                             <input
                               type="text"
+                              id={`experience-input-${idx}`}
                               value={exp.company}
                               onChange={(e) => updateArrayItem('experience', idx, 'company', e.target.value)}
-                              className="w-full border-b border-zinc-200 bg-transparent py-1 text-xs outline-none"
+                              className="w-full border-b border-zinc-200 dark:border-zinc-800 bg-transparent py-1 text-xs outline-none focus:border-indigo-500 transition-colors"
                             />
                           </div>
                           <div>
@@ -1133,16 +1206,16 @@ export const ResumeBuilder: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => addArrayItem('education', { institution: 'University Name', degree: 'B.S. Computer Science', duration: '2020 - 2024', details: 'GPA 3.8' })}
-                      className="w-full py-2.5 rounded-xl border border-dashed border-indigo-200 text-indigo-600 dark:border-indigo-900/50 dark:text-indigo-400 hover:bg-indigo-50/50 text-xs font-bold transition-all cursor-pointer"
+                      className="w-full py-3 rounded-xl border border-dashed border-indigo-300 dark:border-indigo-700/60 bg-indigo-50/40 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 dark:hover:text-white hover:border-indigo-600 dark:hover:border-indigo-600 text-xs font-bold shadow-xs hover:shadow-md hover:shadow-indigo-500/20 transition-all duration-200 cursor-pointer active:scale-[0.99]"
                     >
                       + Add Academic Block
                     </button>
 
                     {editorState.education?.map((edu: any, idx: number) => (
-                      <div key={idx} className="p-4 rounded-xl border border-zinc-150 bg-zinc-50/40 dark:border-zinc-800 dark:bg-zinc-950/40 space-y-3.5 relative">
+                      <div key={idx} id={`education-block-${idx}`} className="p-4 rounded-xl border border-zinc-150 bg-zinc-50/40 dark:border-zinc-800 dark:bg-zinc-950/40 space-y-3.5 relative transition-all">
                         <button
                           onClick={() => removeArrayItem('education', idx)}
-                          className="absolute top-3.5 right-3.5 text-zinc-400 hover:text-red-500"
+                          className="absolute top-3.5 right-3.5 text-zinc-400 hover:text-red-500 cursor-pointer"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -1151,9 +1224,10 @@ export const ResumeBuilder: React.FC = () => {
                           <label className="block text-[10px] uppercase font-bold text-zinc-400">Institution</label>
                           <input
                             type="text"
+                            id={`education-input-${idx}`}
                             value={edu.institution}
                             onChange={(e) => updateArrayItem('education', idx, 'institution', e.target.value)}
-                            className="w-full border-b border-zinc-200 bg-transparent py-1 text-xs outline-none"
+                            className="w-full border-b border-zinc-200 dark:border-zinc-800 bg-transparent py-1 text-xs outline-none focus:border-indigo-500 transition-colors"
                           />
                         </div>
                         <div>
@@ -1196,16 +1270,16 @@ export const ResumeBuilder: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => addArrayItem('projects', { title: 'Personal Dashboard', description: 'Built interactive dashboard.', techStack: ['React'], link: 'https://github.com' })}
-                      className="w-full py-2.5 rounded-xl border border-dashed border-indigo-200 text-indigo-600 dark:border-indigo-900/50 dark:text-indigo-400 hover:bg-indigo-50/50 text-xs font-bold transition-all cursor-pointer"
+                      className="w-full py-3 rounded-xl border border-dashed border-indigo-300 dark:border-indigo-700/60 bg-indigo-50/40 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 dark:hover:text-white hover:border-indigo-600 dark:hover:border-indigo-600 text-xs font-bold shadow-xs hover:shadow-md hover:shadow-indigo-500/20 transition-all duration-200 cursor-pointer active:scale-[0.99]"
                     >
                       + Add Project Block
                     </button>
 
                     {editorState.projects?.map((proj: any, idx: number) => (
-                      <div key={idx} className="p-4 rounded-xl border border-zinc-150 bg-zinc-50/40 dark:border-zinc-800 dark:bg-zinc-950/40 space-y-3.5 relative">
+                      <div key={idx} id={`projects-block-${idx}`} className="p-4 rounded-xl border border-zinc-150 bg-zinc-50/40 dark:border-zinc-800 dark:bg-zinc-950/40 space-y-3.5 relative transition-all">
                         <button
                           onClick={() => removeArrayItem('projects', idx)}
-                          className="absolute top-3.5 right-3.5 text-zinc-400 hover:text-red-500"
+                          className="absolute top-3.5 right-3.5 text-zinc-400 hover:text-red-500 cursor-pointer"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -1214,9 +1288,10 @@ export const ResumeBuilder: React.FC = () => {
                           <label className="block text-[10px] uppercase font-bold text-zinc-400">Project Title</label>
                           <input
                             type="text"
+                            id={`projects-input-${idx}`}
                             value={proj.title}
                             onChange={(e) => updateArrayItem('projects', idx, 'title', e.target.value)}
-                            className="w-full border-b border-zinc-200 bg-transparent py-1 text-xs outline-none"
+                            className="w-full border-b border-zinc-200 dark:border-zinc-800 bg-transparent py-1 text-xs outline-none focus:border-indigo-500 transition-colors"
                           />
                         </div>
                         <div>
@@ -1245,24 +1320,7 @@ export const ResumeBuilder: React.FC = () => {
               </div>
 
               {/* Quick Action bar to save editors to database */}
-              <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-                <div className="text-xs">
-                  {saveStatus === 'saving' && (
-                    <span className="text-indigo-600 dark:text-indigo-400 font-bold flex items-center gap-1.5 animate-pulse">
-                      <RefreshCw className="h-3.5 w-3.5 animate-spin" /> Saving changes...
-                    </span>
-                  )}
-                  {saveStatus === 'unsaved' && (
-                    <span className="text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-amber-500 animate-ping" /> Auto-saving in 10s...
-                    </span>
-                  )}
-                  {saveStatus === 'saved' && (
-                    <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1.5">
-                      <CheckCircle2 className="h-3.5 w-3.5" /> All changes saved
-                    </span>
-                  )}
-                </div>
+              <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-end">
                 <button
                   onClick={handleSaveEditor}
                   disabled={saveStatus === 'saving'}
@@ -1279,10 +1337,32 @@ export const ResumeBuilder: React.FC = () => {
             <div className="lg:col-span-5 xl:col-span-5 rounded-2xl border border-zinc-200 bg-zinc-200/50 p-5 dark:border-zinc-900 dark:bg-zinc-950/40 shadow-sm flex flex-col">
 
               <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-zinc-300 dark:border-zinc-800">
-                <span className="flex items-center gap-1.5 text-xs font-bold text-zinc-500">
-                  <Eye className="h-4.5 w-4.5" />
-                  Interactive Document Preview
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-zinc-500">
+                    <Eye className="h-4.5 w-4.5" />
+                    Interactive Document Preview
+                  </span>
+                  <div className="flex items-center">
+                    {saveStatus === 'saving' && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800/80 leading-none animate-pulse">
+                        <RefreshCw className="h-3.5 w-3.5 animate-spin shrink-0" />
+                        <span className="leading-none">Saving changes...</span>
+                      </span>
+                    )}
+                    {saveStatus === 'unsaved' && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800/80 leading-none">
+                        <span className="h-2 w-2 rounded-full bg-amber-500 animate-ping shrink-0" />
+                        <span className="leading-none">Auto-saving in 5s...</span>
+                      </span>
+                    )}
+                    {saveStatus === 'saved' && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/80 leading-none">
+                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500 dark:text-emerald-400" />
+                        <span className="leading-none">All changes saved</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
                 <div className="flex items-center gap-2">
                   <button onClick={() => setPreviewZoom(Math.max(0.5, previewZoom - 0.25))} className="p-1.5 rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-800 hover:bg-zinc-100 text-zinc-500 cursor-pointer">
                     <ZoomOut className="h-3.5 w-3.5" />
@@ -1337,11 +1417,10 @@ export const ResumeBuilder: React.FC = () => {
                     <button
                       onClick={handleTailorResume}
                       disabled={isTailoring || isAlreadyTailored || (!activeCompany && !pastedJd)}
-                      className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-xs font-bold transition-all ${
-                        isAlreadyTailored
-                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 cursor-not-allowed opacity-80'
-                          : 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 hover:from-indigo-500 hover:via-purple-500 hover:to-pink-400 text-white shadow-lg shadow-indigo-500/20 disabled:opacity-40 cursor-pointer hover:shadow-indigo-500/40 hover:-translate-y-0.5'
-                      }`}
+                      className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-xs font-bold transition-all ${isAlreadyTailored
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 cursor-not-allowed opacity-80'
+                        : 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 hover:from-indigo-500 hover:via-purple-500 hover:to-pink-400 text-white shadow-lg shadow-indigo-500/20 disabled:opacity-40 cursor-pointer hover:shadow-indigo-500/40 hover:-translate-y-0.5'
+                        }`}
                     >
                       {isTailoring ? (
                         <>
@@ -1378,34 +1457,52 @@ export const ResumeBuilder: React.FC = () => {
                 </button>
 
                 {/* Sidebar Missing Keywords */}
-                {atsReport && (
-                  <div className="mt-6 border-t border-zinc-150 dark:border-zinc-800 pt-5 space-y-4">
-                    <h3 className="text-[11px] uppercase font-bold text-red-500 flex items-center gap-1.5">
-                      <AlertTriangle className="h-4 w-4" />
-                      Missing Critical Keywords
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      {atsReport.missingKeywords?.map((kw: string, i: number) => (
-                        <div key={i} className="flex items-center rounded-lg bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400 border border-red-100 dark:border-red-950/30 overflow-hidden group">
-                          <span className="text-[10px] font-semibold px-2 py-1">
-                            {kw}
-                          </span>
-                          <div className="flex items-center border-l border-red-200 dark:border-red-900/50">
-                            <button onClick={() => handleAddKeyword(kw)} className="p-1 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-600 transition-colors cursor-pointer" title="Add to Skills">
-                              <CheckCircle2 className="h-3 w-3" />
-                            </button>
-                            <button onClick={() => handleDismissKeyword(kw)} className="p-1 hover:bg-red-200 dark:hover:bg-red-900/50 text-red-500 transition-colors cursor-pointer" title="Dismiss">
-                              <XCircle className="h-3 w-3" />
-                            </button>
+                {atsReport && (() => {
+                  const fullText = [
+                    editorState.summary || '',
+                    ...(editorState.skills || []),
+                    ...(editorState.experience || []).map((e: any) => `${e.role || ''} ${e.company || ''} ${e.description || ''}`),
+                    ...(editorState.projects || []).map((p: any) => `${p.title || ''} ${p.description || ''} ${(p.techStack || []).join(' ')}`)
+                  ].join(' ').toLowerCase();
+
+                  const filteredMissingKeywords = (atsReport.missingKeywords || []).filter((kw: string) => {
+                    const kwLower = kw.toLowerCase().trim();
+                    if (dismissedKeywords.includes(kwLower)) return false;
+                    if (fullText.includes(kwLower)) return false;
+                    return true;
+                  });
+
+                  return (
+                    <div className="mt-6 border-t border-zinc-150 dark:border-zinc-800 pt-5 space-y-4">
+                      <h3 className="text-[11px] uppercase font-bold text-red-500 flex items-center gap-1.5">
+                        <AlertTriangle className="h-4 w-4" />
+                        Missing Critical Keywords
+                      </h3>
+                      <div className="flex flex-wrap gap-2">
+                        {filteredMissingKeywords.map((kw: string, i: number) => (
+                          <div key={i} className="flex items-center rounded-lg bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400 border border-red-100 dark:border-red-950/30 overflow-hidden group">
+                            <span className="text-[10px] font-semibold px-2 py-1">
+                              {kw}
+                            </span>
+                            <div className="flex items-center border-l border-red-200 dark:border-red-900/50">
+                              <button onClick={() => handleAddKeyword(kw)} className="p-1 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-600 transition-colors cursor-pointer" title="Add to Skills">
+                                <CheckCircle2 className="h-3 w-3" />
+                              </button>
+                              <button onClick={() => handleDismissKeyword(kw)} className="p-1 hover:bg-red-200 dark:hover:bg-red-900/50 text-red-500 transition-colors cursor-pointer" title="Dismiss">
+                                <XCircle className="h-3 w-3" />
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                      {(!atsReport.missingKeywords || atsReport.missingKeywords.length === 0) && (
-                        <span className="text-[10px] text-zinc-400">All target skills represented!</span>
-                      )}
+                        ))}
+                        {filteredMissingKeywords.length === 0 && (
+                          <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> All critical keywords added!
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
 
             </div>
@@ -1482,50 +1579,63 @@ export const ResumeBuilder: React.FC = () => {
                 </div>
 
                 {/* Side-by-side Experience bullet points rewrites comparison */}
-                {atsReport.bulletPointComparisons?.length > 0 && (
-                  <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 space-y-6">
-                    <div>
-                      <h3 className="text-base font-bold">STAR-Method Experience Comparison</h3>
-                      <p className="text-xs text-zinc-400 mt-1">Review original experience phrasings vs. AI tailored impact statements.</p>
-                    </div>
+                {atsReport.bulletPointComparisons?.length > 0 && (() => {
+                  const fullResumeText = [
+                    editorState.summary || '',
+                    ...(editorState.experience || []).map((e: any) => `${e.role || ''} ${e.company || ''} ${e.description || ''}`),
+                    ...(editorState.projects || []).map((p: any) => `${p.title || ''} ${p.description || ''} ${(p.techStack || []).join(' ')}`)
+                  ].join(' ').toLowerCase().replace(/\s+/g, ' ');
 
-                    <div className="space-y-6">
-                      {atsReport.bulletPointComparisons.map((comp: any, idx: number) => (
-                        <div key={idx} className="p-4.5 rounded-xl border border-zinc-150 bg-zinc-50/50 dark:border-zinc-800 dark:bg-zinc-950/40 grid grid-cols-1 md:grid-cols-2 gap-6 relative">
-                          {/* Original */}
-                          <div className="space-y-1">
-                            <span className="text-[10px] font-bold text-zinc-400 uppercase">Original phrasing</span>
-                            <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-normal">{comp.original}</p>
-                          </div>
+                  return (
+                    <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 space-y-6">
+                      <div>
+                        <h3 className="text-base font-bold">STAR-Method Experience Comparison</h3>
+                        <p className="text-xs text-zinc-400 mt-1">Review original experience phrasings vs. AI tailored impact statements.</p>
+                      </div>
 
-                          {/* Suggested */}
-                          <div className="space-y-3 border-l border-zinc-200 md:pl-6 dark:border-zinc-800">
-                            <div>
-                              <span className="text-[10px] font-bold text-indigo-500 uppercase flex items-center gap-1">
-                                <Sparkles className="h-3.5 w-3.5" />
-                                AI STAR Suggestion
-                              </span>
-                              <p className="text-xs text-zinc-800 dark:text-zinc-200 leading-normal mt-1">{comp.suggested}</p>
+                      <div className="space-y-6">
+                        {atsReport.bulletPointComparisons.map((comp: any, idx: number) => {
+                          const cleanSuggested = comp.suggested ? comp.suggested.toLowerCase().trim().replace(/\s+/g, ' ') : '';
+                          const isAdopted = Boolean(comp.applied || (cleanSuggested && fullResumeText.includes(cleanSuggested)));
+
+                          return (
+                            <div key={idx} className="p-4.5 rounded-xl border border-zinc-150 bg-zinc-50/50 dark:border-zinc-800 dark:bg-zinc-950/40 grid grid-cols-1 md:grid-cols-2 gap-6 relative">
+                              {/* Original */}
+                              <div className="space-y-1">
+                                <span className="text-[10px] font-bold text-zinc-400 uppercase">Original phrasing</span>
+                                <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-normal">{comp.original}</p>
+                              </div>
+
+                              {/* Suggested */}
+                              <div className="space-y-3 border-l border-zinc-200 md:pl-6 dark:border-zinc-800">
+                                <div>
+                                  <span className="text-[10px] font-bold text-indigo-500 uppercase flex items-center gap-1">
+                                    <Sparkles className="h-3.5 w-3.5" />
+                                    AI STAR Suggestion
+                                  </span>
+                                  <p className="text-xs text-zinc-800 dark:text-zinc-200 leading-normal mt-1">{comp.suggested}</p>
+                                </div>
+
+                                <div className="flex justify-end pt-1.5">
+                                  <button
+                                    onClick={() => handleApplyBullet(comp)}
+                                    disabled={isAdopted}
+                                    className={`px-3.5 py-1.5 rounded-lg text-[10px] font-bold shadow-sm transition-all ${isAdopted
+                                      ? 'bg-emerald-500 text-white cursor-default opacity-90'
+                                      : 'bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer'
+                                      }`}
+                                  >
+                                    {isAdopted ? 'Adopted ✓' : 'Adopt AI Phrasing'}
+                                  </button>
+                                </div>
+                              </div>
                             </div>
-
-                            <div className="flex justify-end pt-1.5">
-                              <button
-                                onClick={() => handleApplyBullet(comp, idx)}
-                                disabled={comp.applied}
-                                className={`px-3.5 py-1.5 rounded-lg text-[10px] font-bold shadow-sm transition-all cursor-pointer ${comp.applied
-                                  ? 'bg-emerald-500 text-white cursor-default'
-                                  : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                                  }`}
-                              >
-                                {comp.applied ? 'Adopted ✓' : 'Adopt AI Phrasing'}
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             )}
           </div>

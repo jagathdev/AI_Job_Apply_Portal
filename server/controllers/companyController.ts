@@ -57,11 +57,34 @@ async function scrapeJobURL(url: string): Promise<string> {
 }
 
 export const analyzeJobDescription = async (req: AuthRequest, res: Response) => {
-  const { jdText, jdUrl } = req.body;
+  let { jdText, jdUrl, jobInput } = req.body;
   const userId = req.user?.id;
 
   if (!userId) {
     return res.status(401).json({ error: 'Unauthorized.' });
+  }
+
+  if (jobInput && !jdText && !jdUrl) {
+    const urlMatch = jobInput.trim().match(/(https?:\/\/[^\s]+)/i);
+    if (urlMatch) {
+      // Clean extracted URL in case multiple URLs or trailing text got concatenated
+      let extractedUrl = urlMatch[1];
+      // If concatenated like https://...https://..., take the last valid http URL
+      const allUrls = jobInput.trim().match(/https?:\/\/[^\s]+/gi);
+      if (allUrls && allUrls.length > 0) {
+        // Pick the actual job post URL (non-api URL) if present
+        const jobPostUrl = allUrls.find((u: string) => !u.includes('/api/company/analyze')) || allUrls[allUrls.length - 1];
+        extractedUrl = jobPostUrl;
+      }
+      jdUrl = extractedUrl;
+
+      const nonUrlText = jobInput.replace(/https?:\/\/[^\s]+/gi, '').trim();
+      if (nonUrlText.length >= 10) {
+        jdText = jobInput.trim();
+      }
+    } else {
+      jdText = jobInput.trim();
+    }
   }
 
   let finalJdText = jdText || '';
@@ -234,7 +257,7 @@ export const deleteCompany = async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   const userId = req.user?.id;
   console.log(`Deleting company with id: ${id} for user: ${userId}`);
-  
+
   try {
     const result = await Company.deleteOne({ _id: id, userId });
     console.log('Delete result:', result);
