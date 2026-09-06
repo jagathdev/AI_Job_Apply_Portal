@@ -20,13 +20,22 @@ Generate a tailored recruitment email draft based on the company name, job title
 The email should be compelling, polite, concise, and focused on value.
 Avoid dry templates; write as a real, confident person.
 
+CRITICAL FORMATTING RULE:
+You MUST wrap candidate name, target job role, target company name, current job role, current company name, and key skills/technologies in markdown double asterisks **like this**:
+- Target Role: e.g. **Frontend Developer (React.js)**
+- Target Company: e.g. **Andor Tech**
+- Current / Previous Role: e.g. **Junior Associate Software Developer**
+- Current / Previous Company: e.g. **AstroVed**
+- Skills: e.g. **React.js**, **JavaScript (ES6+)**, **TypeScript**, **HTML5**, **CSS3**, **RESTful APIs**
+- Candidate Name: e.g. **Jagath Ratchagan V**
+
 You must return your response strictly as a JSON object matching this structure:
 {
-  "subject": "Compelling subject line with high click-rate",
-  "greeting": "Dear Hiring Team / [Hiring Manager Name] at [Company],",
-  "body": "The meat of the email, highlighting 1-2 key achievements from the resume that directly align with the company's needs.",
+  "subject": "Application for **[Job Title]** – **[Candidate Name]**",
+  "greeting": "Dear Hiring Team / [Hiring Manager Name] at **[Company Name]**,",
+  "body": "The meat of the email, highlighting key achievements from the resume that directly align with the company's needs. Ensure candidate name, current role, current company, skills, and target company are wrapped in **bold** asterisks.",
   "closing": "Looking forward to hearing from you,",
-  "signature": "[Full Name]\\n[Phone]\\n[LinkedIn]"
+  "signature": "**[Full Name]**\\n[Phone]\\n[Email]\\n[LinkedIn]"
 }`;
 
   const userPrompt = `

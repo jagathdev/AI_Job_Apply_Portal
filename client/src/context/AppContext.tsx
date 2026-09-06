@@ -4,8 +4,10 @@ import axios from 'axios';
 // Base API URL configuration
 axios.defaults.baseURL = import.meta.env.VITE_API_URL;
 
+const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+
 // Cookie Utilities
-const setCookie = (name: string, value: string, days = 7) => {
+const setCookie = (name: string, value: string, days = 3) => {
   let expires = "";
   if (days) {
     const date = new Date();
@@ -56,7 +58,7 @@ interface AppContextType {
   activeCompany: any | null;
   isLoading: boolean;
   loginUser: (token: string, userData: User) => void;
-  logoutUser: () => void;
+  logoutUser: (message?: string) => void;
   toggleTheme: () => void;
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
   removeToast: (id: string) => void;
@@ -82,13 +84,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [dashboardStats, setDashboardStats] = useState<any>(null);
   const [openAiLimitModal, setOpenAiLimitModal] = useState<boolean>(false);
 
-  // Global Axios Interceptor for AI Limit Hit (HTTP 429 or quota limit error message)
+  const logoutUser = (message?: string) => {
+    setToken(null);
+    setUser(null);
+    setActiveResumeState(null);
+    setActiveCompanyState(null);
+    setDashboardStats(null);
+    eraseCookie('job_search_token');
+    eraseCookie('job_search_user');
+    eraseCookie('job_search_login_time');
+    delete axios.defaults.headers.common['Authorization'];
+    showToast(message || 'Logged out successfully.', message ? 'error' : 'info');
+  };
+
+  // Global Axios Interceptor for 401 Unauthorized (Auto logout) & AI Limit Hit
   useEffect(() => {
     const interceptor = axios.interceptors.response.use(
       (response) => response,
       (error) => {
         const status = error.response?.status;
         const errorMsg = error.response?.data?.error || '';
+
+        if (status === 401) {
+          logoutUser('Session expired (3 days max). Please log in again.');
+          return Promise.reject(error);
+        }
+
         const isLimitHit = status === 429 ||
           errorMsg.toLowerCase().includes('limit') ||
           errorMsg.toLowerCase().includes('rate limit') ||
@@ -108,23 +129,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, []);
 
-  // Initialize theme and auth from cookies on mount
+  // Initialize theme and auth from cookies on mount, checking for 3-day expiration
   useEffect(() => {
     const storedToken = getCookie('job_search_token');
     const storedUser = getCookie('job_search_user');
+    const storedLoginTime = getCookie('job_search_login_time');
     const storedTheme = getCookie('job_search_theme') as 'light' | 'dark';
     const storedCompany = getCookie('active_company_cache');
     const storedResume = getCookie('active_resume_cache');
 
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      const parsedUser = JSON.parse(storedUser);
-      setUser(parsedUser);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
-
-      // Refresh cookie expiration since the user is active
-      setCookie('job_search_token', storedToken);
-      setCookie('job_search_user', storedUser);
+    if (storedToken && storedUser && storedLoginTime) {
+      const elapsed = Date.now() - parseInt(storedLoginTime, 10);
+      if (elapsed >= THREE_DAYS_MS) {
+        eraseCookie('job_search_token');
+        eraseCookie('job_search_user');
+        eraseCookie('job_search_login_time');
+        showToast('Session expired after 3 days. Please log in again.', 'error');
+      } else {
+        setToken(storedToken);
+        try {
+          setUser(JSON.parse(storedUser));
+        } catch (e) {
+          console.error('Failed to parse user:', e);
+        }
+        axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+      }
+    } else if (storedToken || storedUser) {
+      // If token/user cookies exist without a valid 3-day timestamp, clear them
+      eraseCookie('job_search_token');
+      eraseCookie('job_search_user');
+      eraseCookie('job_search_login_time');
     }
 
     if (storedCompany) {
@@ -148,6 +182,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     applyThemeClass(initialTheme);
   }, []);
 
+  // Periodic interval check for 3-day session auto-logout while active
+  useEffect(() => {
+    if (!token) return;
+
+    const interval = setInterval(() => {
+      const storedLoginTime = getCookie('job_search_login_time');
+      if (storedLoginTime) {
+        const elapsed = Date.now() - parseInt(storedLoginTime, 10);
+        if (elapsed >= THREE_DAYS_MS) {
+          logoutUser('Session expired after 3 days. Please log in again.');
+        }
+      } else {
+        logoutUser('Session expired. Please log in again.');
+      }
+    }, 30000); // Check every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [token]);
+
   const applyThemeClass = (currentTheme: 'light' | 'dark') => {
     const root = window.document.documentElement;
     if (currentTheme === 'dark') {
@@ -158,10 +211,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const loginUser = (userToken: string, userData: User) => {
+    const now = Date.now().toString();
     setToken(userToken);
     setUser(userData);
-    setCookie('job_search_token', userToken);
-    setCookie('job_search_user', JSON.stringify(userData));
+    setCookie('job_search_token', userToken, 3);
+    setCookie('job_search_user', JSON.stringify(userData), 3);
+    setCookie('job_search_login_time', now, 3);
     axios.defaults.headers.common['Authorization'] = `Bearer ${userToken}`;
 
     // Set theme based on user preferences
@@ -171,18 +226,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCookie('job_search_theme', userData.themePreference);
     }
     showToast(`Welcome back, ${userData.name}!`, 'success');
-  };
-
-  const logoutUser = () => {
-    setToken(null);
-    setUser(null);
-    setActiveResumeState(null);
-    setActiveCompanyState(null);
-    setDashboardStats(null);
-    eraseCookie('job_search_token');
-    eraseCookie('job_search_user');
-    delete axios.defaults.headers.common['Authorization'];
-    showToast('Logged out successfully.', 'info');
   };
 
   const toggleTheme = () => {

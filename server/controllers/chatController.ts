@@ -16,15 +16,19 @@ export const sendChatMessage = async (req: AuthRequest, res: Response) => {
   let companyJD = '';
   let atsScore: number | undefined;
 
+  let userInfo: any = undefined;
+  const user = await User.findById(userId);
+
   if (activeResumeId) {
     const resume = await Resume.findOne({ _id: activeResumeId, userId });
     if (resume) {
-      resumeText = `Name: ${resume.personalInfo?.fullName || 'Jagath'}
-Email: ${resume.personalInfo?.email || 'N/A'}
-Phone: ${resume.personalInfo?.phone || 'N/A'}
+      resumeText = `Name: ${resume.personalInfo?.fullName || user?.name || 'Applicant'}
+Email: ${resume.personalInfo?.email || user?.email || 'N/A'}
+Phone: ${resume.personalInfo?.phone || user?.mobile || 'N/A'}
 Location: ${resume.personalInfo?.location || 'N/A'}
 Website/Portfolio: ${resume.personalInfo?.website || 'N/A'}
 LinkedIn: ${resume.personalInfo?.linkedIn || 'N/A'}
+GitHub: ${resume.personalInfo?.github || 'N/A'}
 
 Summary: ${resume.summary || 'N/A'}
 
@@ -43,7 +47,41 @@ Achievements: ${resume.achievements?.join(', ') || 'N/A'}
 Certifications: ${resume.certifications?.join(', ') || 'N/A'}
 Languages: ${resume.languages?.join(', ') || 'N/A'}`;
       atsScore = resume.atsScore;
+
+      let degreeStr = '';
+      if (resume.education && resume.education.length > 0) {
+        const edu = resume.education[0];
+        const degName = edu.degree?.trim();
+        if (degName) {
+          degreeStr = degName.toLowerCase().includes('graduate') ? degName : `${degName} graduate`;
+          if (edu.duration) {
+            const years = edu.duration.match(/\b(20\d{2})\b/g);
+            if (years && years.length > 0) {
+              degreeStr = `${years[years.length - 1]} ${degreeStr}`;
+            }
+          }
+        }
+      }
+
+      userInfo = {
+        name: resume.personalInfo?.fullName || user?.name,
+        email: resume.personalInfo?.email || user?.email,
+        phone: resume.personalInfo?.phone || user?.mobile,
+        location: resume.personalInfo?.location,
+        portfolio: resume.personalInfo?.website,
+        linkedIn: resume.personalInfo?.linkedIn,
+        github: resume.personalInfo?.github,
+        degree: degreeStr || '2025 M.Sc. Computer Science graduate'
+      };
     }
+  }
+
+  if (!userInfo && user) {
+    userInfo = {
+      name: user.name,
+      email: user.email,
+      phone: user.mobile
+    };
   }
 
   if (activeCompanyId) {
@@ -73,7 +111,6 @@ Interview Expectations: ${company.interviewExpectations || 'N/A'}`;
   // 3. Compile history and query context chatbot
   const chatLogs = history.messages.map(m => ({ sender: m.sender as 'user' | 'ai', text: m.text }));
   
-  const user = await User.findById(userId);
   const customApiKeys = {
     groqApiKey: user?.get('groqApiKey') || undefined,
     geminiApiKey: user?.get('geminiApiKey') || undefined
@@ -84,6 +121,7 @@ Interview Expectations: ${company.interviewExpectations || 'N/A'}`;
     resumeText,
     companyJD,
     atsScore,
+    userInfo,
     interviewPrep: activeCompanyId ? 'Active Prep Guide Configured' : undefined,
   }, customApiKeys);
 
