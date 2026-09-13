@@ -7,6 +7,7 @@ import {
   Minus, AlertCircle, ArrowUpRight, HelpCircle, Copy, Check, RotateCcw,
   Mail, MessageCircle
 } from 'lucide-react';
+import { openEmailDraft, openWhatsAppDraft } from '../../utils/contactUtils';
 
 interface ChatMessage {
   sender: 'user' | 'ai';
@@ -448,26 +449,24 @@ export const ChatbotWidget: React.FC = () => {
                               </span>
                               <div className="flex items-center gap-2 flex-wrap">
                                 {hrEmail && (
-                                  <a
-                                    href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(hrEmail)}&su=${encodeURIComponent(cleanBold(parsedEmail.subject))}&body=${encodeURIComponent(cleanBold(parsedEmail.body))}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                                  <button
+                                    type="button"
+                                    onClick={() => openEmailDraft(hrEmail, cleanBold(parsedEmail.subject), cleanBold(parsedEmail.body))}
                                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium bg-red-600 text-white hover:bg-red-700 active:scale-95 transition-all cursor-pointer shadow-xs"
                                   >
                                     <Mail className="h-3.5 w-3.5" />
                                     Email HR ({hrEmail})
-                                  </a>
+                                  </button>
                                 )}
                                 {hrMobile && (
-                                  <a
-                                    href={`https://web.whatsapp.com/send?phone=${hrMobile.replace(/[^0-9]/g, '')}&text=${encodeURIComponent(`${cleanBold(parsedEmail.subject)}\n\n${cleanBold(parsedEmail.body)}`)}`}
-                                    target="whatsapp_web"
-                                    rel="noopener noreferrer"
+                                  <button
+                                    type="button"
+                                    onClick={() => openWhatsAppDraft(hrMobile, `${cleanBold(parsedEmail.subject)}\n\n${cleanBold(parsedEmail.body)}`)}
                                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium bg-emerald-600 text-white hover:bg-emerald-700 active:scale-95 transition-all cursor-pointer shadow-xs"
                                   >
                                     <MessageCircle className="h-3.5 w-3.5 fill-current" />
                                     WhatsApp HR ({hrMobile})
-                                  </a>
+                                  </button>
                                 )}
                               </div>
                             </div>

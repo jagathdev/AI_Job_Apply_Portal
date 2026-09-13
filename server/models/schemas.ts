@@ -61,6 +61,8 @@ const CompanySchema = new Schema({
 // Resume Schema
 const ResumeSchema = new Schema({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  targetCompanyId: { type: Schema.Types.ObjectId, ref: 'Company', default: null },
+  targetCompanyName: { type: String, default: '' },
   name: { type: String, default: 'My Resume' },
   format: { type: String, default: 'pdf' },
   rawText: { type: String, default: '' },

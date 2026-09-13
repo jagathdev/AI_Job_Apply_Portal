@@ -396,11 +396,11 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. ANALYTICS & CHARTS PANEL */}
+      {/* 2. ANALYTICS & CHARTS PANEL (Commented out) */}
+      {/* 
       <div className="mx-auto max-w-[96%] w-full px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch mb-8">
 
-          {/* Pie Chart Card */}
           <div className="lg:col-span-1 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 shadow-sm flex flex-col justify-between">
             <h3 className="text-sm font-black flex items-center gap-1.5 text-zinc-800 dark:text-zinc-100 mb-4">
               Application Status Breakdown
@@ -414,11 +414,8 @@ export const Dashboard: React.FC = () => {
             ) : (
               <div className="flex flex-col items-center justify-center flex-grow py-4">
                 <div className="relative w-36 h-36 flex items-center justify-center">
-                  {/* Clean CSS-SVG Pie Ring */}
                   <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                     <circle cx="18" cy="18" r="15.915" fill="none" stroke="#f4f4f5" strokeWidth="3" className="dark:stroke-zinc-800" />
-
-                    {/* Ring segments based on percentages */}
                     {statusPercentages.applied > 0 && (
                       <circle
                         cx="18"
@@ -474,7 +471,6 @@ export const Dashboard: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Legends */}
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-6 w-full text-[11px] font-bold">
                   <div className="flex items-center gap-1.5 text-zinc-650 dark:text-zinc-400">
                     <span className="h-2.5 w-2.5 rounded-full bg-indigo-500 shrink-0" />
@@ -497,7 +493,6 @@ export const Dashboard: React.FC = () => {
             )}
           </div>
 
-          {/* Activity Graph Card */}
           <div className="lg:col-span-2 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 shadow-sm flex flex-col justify-between">
             <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
               <h3 className="text-sm font-black flex items-center gap-1.5 text-zinc-800 dark:text-zinc-100">
@@ -520,19 +515,17 @@ export const Dashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Custom SVG Bar Graph */}
             <div className="flex-grow flex items-end justify-center py-2 h-[280px] relative min-h-[280px]">
               {(() => {
                 let data: { label: string; count: number; fullLabel: string; companies: string[] }[] = [];
 
                 if (chartView === 'week') {
-                  // Week view (Mon - Sun)
                   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
                   const fullDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
                   data = days.map((d, i) => ({ label: d, count: 0, fullLabel: fullDays[i], companies: [] }));
 
                   const today = new Date();
-                  const currentDayIndex = (today.getDay() + 6) % 7; // 0 for Mon, 6 for Sun
+                  const currentDayIndex = (today.getDay() + 6) % 7;
                   const startOfWeek = new Date(today);
                   startOfWeek.setDate(today.getDate() - currentDayIndex);
                   startOfWeek.setHours(0, 0, 0, 0);
@@ -547,7 +540,6 @@ export const Dashboard: React.FC = () => {
                     }
                   });
                 } else {
-                  // Month view (Jan - Dec)
                   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
                   data = months.map(m => ({ label: m, count: 0, fullLabel: m, companies: [] }));
                   const currentYear = new Date().getFullYear();
@@ -563,14 +555,13 @@ export const Dashboard: React.FC = () => {
                   });
                 }
 
-                const maxCount = Math.max(...data.map(d => d.count), 5); // Ensure some height even if small
+                const maxCount = Math.max(...data.map(d => d.count), 5);
                 const barWidth = chartView === 'week' ? 30 : 20;
                 const gap = chartView === 'week' ? 40 : 15;
                 const maxHeight = 100;
 
                 return (
                   <div className="w-full h-full overflow-x-auto overflow-y-hidden scrollbar-hide flex items-end justify-start sm:justify-center relative pb-[40px] px-2 pt-[100px]">
-                    {/* Horizontal grid line */}
                     <div className="absolute bottom-[40px] left-0 right-0 h-px bg-zinc-200 dark:bg-zinc-800"></div>
 
                     <div className="flex items-end gap-[15px] sm:gap-[40px] px-2 h-[120px] mt-auto" style={{ gap: `${gap}px` }}>
@@ -578,7 +569,6 @@ export const Dashboard: React.FC = () => {
                         const height = (item.count / maxCount) * maxHeight;
                         return (
                           <div key={idx} className="flex flex-col items-center justify-end group relative h-full">
-                            {/* Tooltip with Companies List */}
                             <div className="absolute bottom-full mb-3 opacity-0 group-hover:opacity-100 transition-opacity bg-zinc-800 dark:bg-white text-white dark:text-zinc-900 text-[10px] font-bold p-2.5 rounded-lg shadow-xl pointer-events-none z-10 min-w-[140px] flex flex-col items-center">
                               <div className="text-indigo-400 dark:text-indigo-600 mb-1.5 pb-1.5 border-b border-zinc-700 dark:border-zinc-200 w-full text-center">
                                 {item.fullLabel}: {item.count} jobs
@@ -596,11 +586,9 @@ export const Dashboard: React.FC = () => {
                                 <span className="text-zinc-500 font-medium italic">No jobs</span>
                               )}
 
-                              {/* Triangle pointer */}
                               <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 bg-zinc-800 dark:bg-white rounded-sm"></div>
                             </div>
 
-                            {/* Count label above bar */}
                             {item.count > 0 && (
                               <span className="text-[10px] font-black text-indigo-500 mb-1.5">{item.count}</span>
                             )}
@@ -608,13 +596,11 @@ export const Dashboard: React.FC = () => {
                               <span className="text-[10px] font-black text-zinc-300 dark:text-zinc-600 mb-1.5 opacity-0 group-hover:opacity-100 transition-opacity">{item.count}</span>
                             )}
 
-                            {/* Bar */}
                             <div
                               className={`w-[${barWidth}px] rounded-t-sm transition-all duration-500 hover:brightness-110 ${item.count > 0 ? 'bg-gradient-to-t from-indigo-600 to-purple-500' : 'bg-zinc-100 dark:bg-zinc-800'}`}
                               style={{ height: `${height || 2}px`, width: `${barWidth}px` }}
                             ></div>
 
-                            {/* X Axis Label */}
                             <span className="absolute top-full mt-3 text-[9px] font-bold text-zinc-400 uppercase tracking-wider whitespace-nowrap left-1/2 -translate-x-1/2">{item.fullLabel}</span>
                           </div>
                         );
@@ -629,6 +615,10 @@ export const Dashboard: React.FC = () => {
             </p>
           </div>
         </div>
+      </div>
+      */}
+
+      <div className="mx-auto max-w-[96%] w-full px-4 sm:px-6 lg:px-8 py-4">
 
         {/* 3. WORKSPACE MANAGEMENTS PANEL */}
         <div className="w-full space-y-6">

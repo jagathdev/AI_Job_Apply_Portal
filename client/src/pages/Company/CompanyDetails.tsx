@@ -9,12 +9,13 @@ import {
   TrendingUp, Clock, HelpCircle, MessageSquare, Briefcase,
   Mail, Phone, ExternalLink, Image as ImageIcon, ChevronRight,
   ChevronLeft, ArrowRight, Star, Award, Zap, Check, BookOpen, Users,
-  CheckCircle2
+  CheckCircle2, MessageCircle
 } from 'lucide-react';
+import { openEmailDraft, openWhatsAppDraft } from '../../utils/contactUtils';
 
 const getEnrichedStepDetails = (stepText: string, index: number) => {
   const text = stepText.toLowerCase();
-  
+
   if (text.includes('screening') || text.includes('phone') || text.includes('recruiter')) {
     return {
       duration: '30-45 mins',
@@ -23,7 +24,7 @@ const getEnrichedStepDetails = (stepText: string, index: number) => {
       tip: 'Prepare a 2-minute elevator pitch of your experience. Be ready to discuss your salary expectations and notice period.'
     };
   }
-  
+
   if (text.includes('coding') || text.includes('test') || text.includes('exercise') || text.includes('assignment')) {
     return {
       duration: '60-90 mins',
@@ -32,7 +33,7 @@ const getEnrichedStepDetails = (stepText: string, index: number) => {
       tip: 'Practice easy-medium algorithms on LeetCode. Write clean, self-documenting code and test edge cases before submitting.'
     };
   }
-  
+
   if (text.includes('technical') || text.includes('architect') || text.includes('coding interview') || text.includes('system design')) {
     return {
       duration: '60 mins',
@@ -41,7 +42,7 @@ const getEnrichedStepDetails = (stepText: string, index: number) => {
       tip: 'Think out loud during coding. Clarify requirements before writing code, and discuss trade-offs of different design solutions.'
     };
   }
-  
+
   if (text.includes('culture') || text.includes('fit') || text.includes('manager') || text.includes('director') || text.includes('lead')) {
     return {
       duration: '45-60 mins',
@@ -50,7 +51,7 @@ const getEnrichedStepDetails = (stepText: string, index: number) => {
       tip: 'Structure your answers using the STAR method (Situation, Task, Action, Result). Highlight how you collaborate with cross-functional teams.'
     };
   }
-  
+
   if (text.includes('offer') || text.includes('negotiation') || text.includes('closing')) {
     return {
       duration: '15-30 mins',
@@ -301,19 +302,43 @@ export const CompanyDetails: React.FC = () => {
                         {company.hrEmail && (
                           <li className="flex flex-col gap-1">
                             <span className="text-zinc-400 dark:text-zinc-500">HR Email ID:</span>
-                            <a href={`mailto:${company.hrEmail}`} className="font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => openEmailDraft(
+                                company.hrEmail,
+                                `Application for ${company.jobTitle || 'Role'} - ${company.companyName || ''}`,
+                                `Dear HR Team,\n\nI am writing to express my interest in the ${company.jobTitle || 'Role'} position at ${company.companyName || ''}.\n\nBest regards,`
+                              )}
+                              className="font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 text-left cursor-pointer"
+                            >
                               <Mail className="h-3.5 w-3.5 shrink-0" />
                               {company.hrEmail}
-                            </a>
+                            </button>
                           </li>
                         )}
                         {company.hrMobile && (
                           <li className="flex flex-col gap-1">
-                            <span className="text-zinc-400 dark:text-zinc-500">HR Mobile Number:</span>
-                            <a href={`tel:${company.hrMobile}`} className="font-bold text-zinc-700 dark:text-zinc-300 hover:underline flex items-center gap-1">
-                              <Phone className="h-3.5 w-3.5 shrink-0" />
-                              {company.hrMobile}
-                            </a>
+                            <span className="text-zinc-400 dark:text-zinc-500">HR Mobile / WhatsApp:</span>
+                            <div className="flex items-center gap-3 flex-wrap">
+                              <button
+                                type="button"
+                                onClick={() => openWhatsAppDraft(
+                                  company.hrMobile,
+                                  `Hello HR Team, I am interested in applying for the ${company.jobTitle || 'role'} position at ${company.companyName || ''}.`
+                                )}
+                                className="font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 text-left cursor-pointer"
+                              >
+                                <MessageCircle className="h-3.5 w-3.5 shrink-0 fill-current" />
+                                WhatsApp ({company.hrMobile})
+                              </button>
+                              <a
+                                href={`tel:${company.hrMobile}`}
+                                className="text-[11px] font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:underline flex items-center gap-1"
+                              >
+                                <Phone className="h-3 w-3 shrink-0" />
+                                Call
+                              </a>
+                            </div>
                           </li>
                         )}
                         {!company.hrEmail && !company.hrMobile && (
@@ -663,12 +688,12 @@ export const CompanyDetails: React.FC = () => {
                         const isLegacy = typeof stepObj === 'string';
                         const stepTitle = isLegacy ? stepObj.split(':')[0] : (stepObj?.step || `Step ${i + 1}`);
                         const stepDesc = isLegacy ? stepObj.split(':')[1] || 'Recruitment coordination checkpoint' : '';
-                        
+
                         const enrichedFallback = isLegacy ? getEnrichedStepDetails(stepObj, i) : null;
                         const duration = isLegacy ? enrichedFallback?.duration : (stepObj?.duration || '45 mins');
                         const format = isLegacy ? enrichedFallback?.format : (stepObj?.format || 'Video Interview');
                         const tip = isLegacy ? enrichedFallback?.tip : (stepObj?.tip || 'Review key role requirements.');
-                        
+
                         return (
                           <div key={i} className="relative pl-8 pb-6 last:pb-0">
                             {/* Connecting line */}
@@ -685,13 +710,13 @@ export const CompanyDetails: React.FC = () => {
                                   {duration} • {format}
                                 </span>
                               </div>
-                              
+
                               {stepDesc && (
                                 <p className="text-[11px] text-zinc-555 dark:text-zinc-400 mt-1 font-medium leading-relaxed">
                                   {stepDesc}
                                 </p>
                               )}
-                              
+
                               <div className="mt-1.5 text-[10.5px] text-zinc-400 dark:text-zinc-500 font-medium">
                                 <span className="font-semibold text-indigo-500 dark:text-indigo-400">Prep Tip: </span>
                                 {tip}
@@ -761,25 +786,25 @@ export const CompanyDetails: React.FC = () => {
               </div>
 
               {/* Navigation Actions */}
-              <div className="flex items-center justify-between pt-8 border-t border-zinc-200 dark:border-zinc-800 mt-8 mb-4">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pt-6 border-t border-zinc-200 dark:border-zinc-800 mt-8 mb-4">
                 <button
                   onClick={() => {
                     setActiveTab('culture');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-5 py-2.5 text-sm font-bold text-zinc-700 shadow-sm hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+                  className="flex items-center justify-center gap-1.5 px-4.5 py-3 sm:py-2.5 rounded-xl border border-zinc-200 bg-white hover:bg-indigo-50/40 hover:border-indigo-200/50 hover:text-indigo-600 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:!bg-indigo-950/30 dark:hover:!border-indigo-900/40 dark:hover:!text-indigo-400 text-zinc-700 dark:text-zinc-300 text-xs font-bold transition-all cursor-pointer duration-200 hover:-translate-x-0.5 w-full sm:w-auto whitespace-nowrap shrink-0"
                 >
-                  <ArrowLeft className="h-4 w-4" />
-                  Back (Culture & Benefits)
+                  <ChevronLeft className="h-4 w-4" />
+                  Back: Culture & Benefits
                 </button>
                 <button
                   onClick={() => {
                     navigate('/resume-builder');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-indigo-700 transition-all cursor-pointer"
+                  className="flex items-center justify-center gap-1.5 px-5 py-3 sm:py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-500/10 transition-all cursor-pointer duration-200 hover:translate-x-0.5 w-full sm:w-auto whitespace-nowrap shrink-0"
                 >
-                  Next (Resume Builder)
+                  Next: Resume Builder
                   <ArrowRight className="h-4 w-4" />
                 </button>
               </div>

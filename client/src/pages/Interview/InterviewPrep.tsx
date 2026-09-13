@@ -502,31 +502,30 @@ export const InterviewPrep: React.FC = () => {
         )}
 
         {/* Navigation Actions Bottom */}
-        <div className="flex items-center justify-between pt-8 border-t border-zinc-200 dark:border-zinc-800 mt-8 mb-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pt-6 border-t border-zinc-200 dark:border-zinc-800 mt-8 mb-4">
           <Link
             to="/resume-builder"
-            className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-5 py-2.5 text-sm font-bold text-zinc-700 shadow-sm hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+            className="flex items-center justify-center gap-1.5 px-4.5 py-3 sm:py-2.5 rounded-xl border border-zinc-200 bg-white hover:bg-indigo-50/40 hover:border-indigo-200/50 hover:text-indigo-600 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:!bg-indigo-950/30 dark:hover:!border-indigo-900/40 dark:hover:!text-indigo-400 text-zinc-700 dark:text-zinc-300 text-xs font-bold transition-all cursor-pointer duration-200 hover:-translate-x-0.5 w-full sm:w-auto whitespace-nowrap shrink-0"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back (Resume Builder)
+            Back: Resume Builder
           </Link>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
             {evaluatedQuestionsCount > 0 && (
               <button
                 onClick={calculateFinalConfirmationScore}
-                className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-indigo-700 transition-all cursor-pointer"
+                className="flex items-center justify-center gap-1.5 px-5 py-3 sm:py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-500/10 transition-all cursor-pointer duration-200 w-full sm:w-auto whitespace-nowrap shrink-0"
               >
-                Finish Evaluation
-                <Award className="h-4.5 w-4.5" />
-                Show My Final Score
+                <Award className="h-4 w-4" />
+                Show Final Score
               </button>
             )}
             <Link
               to="/dashboard"
-              className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-5 py-2.5 text-sm font-bold text-zinc-700 shadow-sm hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+              className="flex items-center justify-center gap-1.5 px-5 py-3 sm:py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-500/10 transition-all cursor-pointer duration-200 hover:translate-x-0.5 w-full sm:w-auto whitespace-nowrap shrink-0"
             >
-              Dashboard
+              Next: Dashboard
               <ChevronRight className="h-4 w-4" />
             </Link>
           </div>

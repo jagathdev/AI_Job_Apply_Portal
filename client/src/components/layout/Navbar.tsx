@@ -8,6 +8,8 @@ import {
   Building, Home as HomeIcon
 } from 'lucide-react';
 
+import { CareerLensLogo } from '../common/CareerLensLogo';
+
 export const Navbar: React.FC = () => {
   const { user, logoutUser, theme, toggleTheme, activeCompany } = useApp();
   const [isOpen, setIsOpen] = useState(false);
@@ -39,12 +41,7 @@ export const Navbar: React.FC = () => {
           {/* Logo */}
           <div className="flex items-center">
             <Link to={user ? '/home' : '/'} className="flex items-center gap-2 group shrink-0">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 text-white shadow-md shadow-indigo-500/20 group-hover:scale-105 transition-transform duration-300">
-                <Sparkles className="h-5 w-5" />
-              </div>
-              <span className="text-base lg:text-lg font-bold tracking-tight bg-gradient-to-r from-zinc-900 via-indigo-950 to-indigo-600 bg-clip-text text-transparent dark:from-zinc-50 dark:via-zinc-200 dark:to-indigo-400">
-                Apply<span className="font-medium text-indigo-600 dark:text-indigo-400">AI</span>
-              </span>
+              <CareerLensLogo />
             </Link>
           </div>
 

@@ -194,9 +194,17 @@ export const tailorResumeToJob = async (req: AuthRequest, res: Response) => {
 
   const rewrittenData = await rewriteResume(currentResumeData, jobDescription, customApiKeys);
 
+  let targetCompName = '';
+  if (companyId) {
+    const companyObj = await Company.findOne({ _id: companyId, userId });
+    if (companyObj) targetCompName = companyObj.companyName;
+  }
+
   // Save tailored resume as a new document
   const savedTailored = await Resume.create({
     userId,
+    targetCompanyId: companyId || null,
+    targetCompanyName: targetCompName,
     name: shortName,
     rawText: resume.rawText,
     ...rewrittenData,

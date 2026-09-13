@@ -30,6 +30,7 @@ export const Home: React.FC = () => {
   const [fallbackRole, setFallbackRole] = useState('');
 
   const guideRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const navigate = useNavigate();
 
   const loadingStages = [
@@ -124,7 +125,22 @@ export const Home: React.FC = () => {
   const completionPercentage = user?.profileCompletion || 30;
   const isResumeUploaded = !!activeResume;
   const isJobAnalyzed = !!activeCompany;
-  const isTailored = activeResume?.name?.toLowerCase().includes('tailored') || false;
+  const isTailored = (() => {
+    if (!activeResume) return false;
+    if (activeResume.targetCompanyId && activeCompany?._id) {
+      return String(activeResume.targetCompanyId) === String(activeCompany._id);
+    }
+    if (activeResume.targetCompanyName && activeCompany?.companyName) {
+      return activeResume.targetCompanyName.toLowerCase().trim() === activeCompany.companyName.toLowerCase().trim();
+    }
+    if (activeCompany?.companyName) {
+      const cNamePlain = activeCompany.companyName.toLowerCase().trim();
+      const cNameSlug = cNamePlain.replace(/\s+/g, '_');
+      const rNameLower = (activeResume.name || '').toLowerCase();
+      return (rNameLower.includes(cNamePlain) || rNameLower.includes(cNameSlug)) && (rNameLower.includes('ats') || rNameLower.includes('tailored'));
+    }
+    return activeResume?.name?.toLowerCase().includes('tailored') || activeResume?.name?.toLowerCase().includes('ats') || false;
+  })();
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 transition-colors duration-300">
@@ -143,17 +159,17 @@ export const Home: React.FC = () => {
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 text-xs font-bold uppercase tracking-wider mx-auto"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 text-xs font-bold uppercase tracking-wider mx-auto"
           >
-            <Sparkles className="h-4 w-4 text-indigo-400" />
-            AI Application Pipeline Active
+            <Sparkles className="h-4 w-4 text-cyan-400" />
+            CareerLens AI Active
           </motion.div>
 
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight leading-tight text-balance break-words">
-            Accelerate Your Job Application Journey
+            Analyze Companies. Tailor ATS Resumes. Land Jobs Faster.
           </h1>
           <p className="text-xs sm:text-sm md:text-base text-zinc-300 max-w-2xl mx-auto leading-relaxed text-balance">
-            Our AI-guided suite helps you analyze company cultures, tailor resume experience bullets utilizing AI, and prepare custom mock interviews. Follow the checklist below to land your role.
+            CareerLens AI helps job seekers analyze company profiles, build 100% ATS-friendly resumes, optimize keywords, prepare for AI mock interviews, and land target jobs effortlessly.
           </p>
 
           <div className="pt-4 flex justify-center">
@@ -230,16 +246,23 @@ export const Home: React.FC = () => {
               </div>
 
               {!isAnalyzing && isJobAnalyzed && (
-                <div className="flex flex-wrap gap-2.5 items-center bg-zinc-55 bg-zinc-100/50 dark:bg-zinc-800/40 p-3.5 rounded-xl border border-zinc-200/50 dark:border-zinc-800/40 text-xs">
-                  <Briefcase className="h-4 w-4 text-indigo-500 shrink-0" />
-                  <div className="flex-1">
-                    <span className="font-bold text-zinc-800 dark:text-zinc-200">{activeCompany.companyName}</span>
-                    <span className="mx-2 text-zinc-350 dark:text-zinc-600">•</span>
-                    <span className="text-zinc-500 dark:text-zinc-400">{activeCompany.jobTitle}</span>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-zinc-100/50 dark:bg-zinc-800/40 p-3.5 rounded-xl border border-zinc-200/50 dark:border-zinc-800/40 text-xs">
+                  <div className="space-y-1.5 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 text-[10px] font-extrabold uppercase tracking-wider shrink-0">
+                        <Briefcase className="h-3 w-3" />
+                        Recently Analyzed
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5 text-xs font-semibold">
+                      <span className="font-bold text-zinc-900 dark:text-zinc-100">{activeCompany.companyName}</span>
+                      <span className="text-zinc-400 dark:text-zinc-600">•</span>
+                      <span className="text-zinc-600 dark:text-zinc-300">{activeCompany.jobTitle}</span>
+                    </div>
                   </div>
                   <Link
                     to={`/company/${activeCompany._id || activeCompany.id}`}
-                    className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 shrink-0"
+                    className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 shrink-0 self-start sm:self-auto pt-1 sm:pt-0"
                   >
                     View Details
                     <ArrowRight className="h-3 w-3" />
@@ -250,15 +273,21 @@ export const Home: React.FC = () => {
               <form onSubmit={handleAnalyze} className="space-y-3.5">
                 <div className="grid grid-cols-1 gap-3.5">
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider block">Job Link or Description Text</label>
-                    <textarea
-                      placeholder="Paste a job link (e.g., https://jobs.lever.co/...) OR paste the full job description text here..."
-                      value={jobInput}
-                      onChange={(e) => setJobInput(e.target.value)}
-                      disabled={isAnalyzing}
-                      rows={5}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 text-xs shadow-sm focus:border-indigo-500 focus:outline-none transition-all disabled:opacity-50 resize-y"
-                    />
+                    <label className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider block flex items-center justify-between gap-2">
+                      <span className="truncate">Job Link or Description Text</span>
+                      <span className="text-[10px] text-cyan-500 font-semibold lowercase shrink-0 whitespace-nowrap">ai auto-detector ready</span>
+                    </label>
+                    <div className="relative group p-[1.5px] rounded-xl bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 shadow-[0_0_12px_rgba(6,182,212,0.3)] focus-within:shadow-[0_0_20px_rgba(6,182,212,0.6)] focus-within:from-cyan-400 focus-within:via-blue-400 focus-within:to-indigo-500 transition-all duration-300">
+                      <textarea
+                        ref={textareaRef}
+                        placeholder="Paste a job link (e.g., https://jobs.lever.co/...) OR paste the full job description text here..."
+                        value={jobInput}
+                        onChange={(e) => setJobInput(e.target.value)}
+                        disabled={isAnalyzing}
+                        rows={5}
+                        className="block w-full px-4 py-3 rounded-[10.5px] bg-white dark:bg-zinc-950 text-xs font-medium text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none transition-all disabled:opacity-50 resize-y border-none"
+                      />
+                    </div>
                   </div>
                 </div>
 

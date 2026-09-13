@@ -33,7 +33,7 @@ export const register = async (req: any, res: Response) => {
   }
 
   // Check unique email and mobile
-  const existingUser = await User.findOne({ $or: [{ email }, { mobile }] });
+  const existingUser = await User.findOne({ $or: [{ email }, { mobile }] }).lean();
   if (existingUser) {
     if (existingUser.email === email) {
       return res.status(400).json({ error: 'Email is already registered.' });
@@ -66,10 +66,10 @@ export const login = async (req: any, res: Response) => {
     return res.status(400).json({ error: 'Please enter Email/Mobile and Password.' });
   }
 
-  // Search by email or mobile
+  // Search by email or mobile (using .lean() for maximum speed)
   const user = await User.findOne({
     $or: [{ email: identifier }, { mobile: identifier }],
-  });
+  }).lean();
 
   if (!user) {
     return res.status(400).json({ error: 'Invalid Email/Mobile or Password.' });
