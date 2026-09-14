@@ -259,7 +259,7 @@ https://github.com/jagathdev/AI_Job_Apply_Portal
 
 👨‍💻 Developer
 
-Jagathratchagan V
+Jagath Ratchagan
 
 Full-Stack / MERN Stack Developer
 
