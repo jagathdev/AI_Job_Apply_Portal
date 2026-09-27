@@ -66,24 +66,58 @@ export const ResumeBuilder: React.FC = () => {
     }
   }, [token]);
 
+  const activeResumeIdRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (activeResume) {
-      isInitialLoad.current = true;
-      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-      setSaveStatus('saved');
-      setEditorState({
-        personalInfo: activeResume.personalInfo || { fullName: '', targetRole: '', email: '', phone: '', location: '', website: '', linkedIn: '', github: '' },
-        summary: activeResume.summary || '',
-        skills: activeResume.skills || [],
-        experience: activeResume.experience || [],
-        education: activeResume.education || [],
-        projects: activeResume.projects || [],
-        achievements: activeResume.achievements || [],
-        certifications: activeResume.certifications || [],
-        languages: activeResume.languages || [],
-        interests: activeResume.interests || []
-      });
-      calculateMockATSMetrics(activeResume);
+      if (activeResumeIdRef.current !== activeResume._id) {
+        activeResumeIdRef.current = activeResume._id;
+        isInitialLoad.current = true;
+        if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+        setSaveStatus('saved');
+        const loadedPersonalInfo = activeResume.personalInfo || { fullName: '', targetRole: '', email: '', phone: '', location: '', website: '', linkedIn: '', github: '' };
+
+        // Extract or fallback GitHub link from rawText or website if missing
+        let initialGithub = loadedPersonalInfo.github || '';
+        if (!initialGithub && activeResume.rawText) {
+          const ghMatch = activeResume.rawText.match(/github\.com\/[a-zA-Z0-9_-]+/i);
+          if (ghMatch) {
+            initialGithub = `https://${ghMatch[0]}`;
+          }
+        }
+        if (!initialGithub && loadedPersonalInfo.website && loadedPersonalInfo.website.includes('github')) {
+          initialGithub = loadedPersonalInfo.website;
+        }
+
+        // Pre-fill targetRole from activeCompany or candidate background if empty
+        let initialTargetRole = loadedPersonalInfo.targetRole || '';
+        if (!initialTargetRole && activeCompany?.jobTitle) {
+          initialTargetRole = activeCompany.jobTitle;
+        }
+
+        setEditorState({
+          personalInfo: {
+            fullName: loadedPersonalInfo.fullName || '',
+            targetRole: initialTargetRole,
+            email: loadedPersonalInfo.email || '',
+            phone: loadedPersonalInfo.phone || '',
+            location: loadedPersonalInfo.location || '',
+            website: loadedPersonalInfo.website || '',
+            linkedIn: loadedPersonalInfo.linkedIn || '',
+            github: initialGithub
+          },
+          summary: activeResume.summary || '',
+          skills: activeResume.skills || [],
+          experience: activeResume.experience || [],
+          education: activeResume.education || [],
+          projects: activeResume.projects || [],
+          achievements: activeResume.achievements || [],
+          certifications: activeResume.certifications || [],
+          languages: activeResume.languages || [],
+          interests: activeResume.interests || []
+        });
+        calculateMockATSMetrics(activeResume);
+      }
     }
   }, [activeResume]);
 
@@ -537,6 +571,36 @@ export const ResumeBuilder: React.FC = () => {
 
   const generateHTMLTemplate = () => {
     const personal = editorState.personalInfo;
+
+    // Helper to format skills into category rows if they contain colons or display as styled list
+    const renderSkills = () => {
+      if (!editorState.skills || editorState.skills.length === 0) return '';
+
+      const items = editorState.skills;
+      const hasCategories = items.some((s: string) => typeof s === 'string' && s.includes(':'));
+
+      if (hasCategories) {
+        return items.map((skillItem: string) => {
+          const colonIdx = skillItem.indexOf(':');
+          if (colonIdx !== -1) {
+            const category = skillItem.substring(0, colonIdx).trim();
+            const rest = skillItem.substring(colonIdx + 1).trim();
+            return `<div class="skill-category-row"><span class="skill-cat-title">${category}:</span> ${rest}</div>`;
+          }
+          return `<div class="skill-category-row">${skillItem}</div>`;
+        }).join('');
+      }
+
+      // Display skills separated by commas
+      return `
+        <div class="skills-list">
+          <p style="margin: 2px 0; line-height: 1.5; color: #2d3748; font-size: 10.5px;">
+            ${items.join(', ')}
+          </p>
+        </div>
+      `;
+    };
+
     return `
 <!DOCTYPE html>
 <html>
@@ -549,10 +613,10 @@ export const ResumeBuilder: React.FC = () => {
     html { background: #e4e4e7; padding: 20px; min-height: 100vh; overflow: auto; }
     body { 
       font-family: 'Inter', system-ui, -apple-system, sans-serif; 
-      color: #374151; 
-      line-height: 1.5; 
+      color: #2d3748; 
+      line-height: 1.4; 
       margin: 0 auto; 
-      font-size: 13px;
+      font-size: 11px;
       background: transparent;
       overflow: hidden;
     }
@@ -571,7 +635,7 @@ export const ResumeBuilder: React.FC = () => {
       position: relative;
     }
     .page-content {
-      padding: 35px 45px;
+      padding: 32px 42px;
       box-sizing: border-box;
     }
     @media print {
@@ -580,28 +644,109 @@ export const ResumeBuilder: React.FC = () => {
       body { transform: none !important; zoom: 1 !important; width: 100% !important; margin: 0 !important; }
       .page { margin-bottom: 0 !important; box-shadow: none !important; border: none !important; page-break-after: always; height: 1123px !important; }
       .page:last-child { page-break-after: auto; }
-      .page-content { padding: 35px 45px !important; }
+      .page-content { padding: 32px 42px !important; }
     }
-    .header { margin-bottom: 20px; text-align: center; }
-    h1 { font-size: 28px; font-weight: 800; margin: 0 0 6px 0; color: #111827; letter-spacing: normal; }
-    .contact-info { font-size: 12px; color: #6b7280; font-weight: 500; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; }
+
+    /* Header styling - Center aligned candidate name & role */
+    .header { margin-bottom: 12px; text-align: center; }
+    h1.candidate-name { 
+      font-size: 25px; 
+      font-weight: 800; 
+      margin: 0 0 3.5px 0; 
+      color: #111827; 
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      line-height: 1.1;
+      text-align: center;
+    }
+    .role-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: #111827;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 5px;
+      text-align: center;
+    }
+    .role-subtitle {
+      color: #4b5563;
+      font-weight: 500;
+      text-transform: none;
+    }
+    .contact-info { 
+      font-size: 10.5px; 
+      color: #4b5563; 
+      font-weight: 500; 
+      display: flex; 
+      flex-wrap: wrap; 
+      gap: 6px; 
+      align-items: center; 
+      justify-content: center;
+      margin-top: 4px;
+    }
     .contact-info a { color: #2563eb; text-decoration: none; }
-    .contact-info .divider { color: #9ca3af; margin: 0 4px; }
-    h2 { font-size: 14px; font-weight: 700; margin: 18px 0 8px 0; text-transform: uppercase; color: #111827; border-bottom: 1.5px solid #e5e7eb; padding-bottom: 4px; letter-spacing: 0.5px; }
-    p { margin: 6px 0; text-align: left; color: #374151; overflow-wrap: break-word; line-height: 1.6; letter-spacing: normal; word-spacing: normal; }
-    ul { margin: 6px 0 12px 0; padding-left: 20px; color: #374151; }
-    li { margin-bottom: 4px; line-height: 1.5; letter-spacing: normal; word-spacing: normal; }
-    a { color: #2563eb; text-decoration: none; }
-    .section-row { display: flex; justify-content: space-between; margin-bottom: 4px; align-items: flex-start; gap: 12px; }
-    .item-title { font-weight: 700; color: #111827; font-size: 14px; letter-spacing: normal; }
-    .item-subtitle { font-weight: 600; color: #4b5563; font-size: 12px; letter-spacing: normal; }
-    .item-date { font-size: 11px; font-weight: 600; color: #6b7280; white-space: nowrap; padding: 2px 0px; letter-spacing: normal; }
-    .skills-list { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 8px 0; }
-    .skill-tag { color: #374151; font-size: 12px; font-weight: 600; display: inline-block; background: transparent; padding: 0; border-radius: 0; letter-spacing: normal; }
-    .skills-bullet-list { margin: 2px 0 6px 0; padding-left: 20px; }
-    .skills-bullet-list li { margin-bottom: 2px; line-height: 1.4; }
-    .tech-stack { font-size: 11px; color: #6b7280; margin-top: 2px; font-weight: 500; letter-spacing: normal; }
-    .score-badge { font-size: 11px; color: #2563eb; font-weight: 600; margin-top: 4px; display: inline-block; }
+    .contact-info a:hover { text-decoration: underline; }
+    .contact-info .divider { color: #9ca3af; margin: 0 2px; }
+
+    .header-divider-line {
+      height: 1.5px;
+      background-color: #111827;
+      width: 100%;
+      margin-top: 7px;
+      margin-bottom: 11px;
+    }
+
+    /* Section headers */
+    h2.section-header { 
+      font-size: 12px; 
+      font-weight: 800; 
+      margin: 12px 0 4px 0; 
+      text-transform: uppercase; 
+      color: #111827; 
+      border-bottom: 1.5px solid #111827; 
+      padding-bottom: 2px; 
+      letter-spacing: 0.5px; 
+    }
+
+    p { margin: 4px 0; text-align: left; color: #2d3748; overflow-wrap: break-word; line-height: 1.42; font-size: 10.5px; }
+    
+    /* Skills styling */
+    .skill-category-row {
+      font-size: 10.5px;
+      line-height: 1.4;
+      margin-bottom: 3px;
+      color: #2d3748;
+    }
+    .skill-cat-title {
+      font-weight: 700;
+      color: #111827;
+    }
+    .skills-list { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 4px 0; }
+    .skill-tag { color: #2d3748; font-size: 10.5px; font-weight: 600; display: inline-block; }
+    .skill-dot { color: #4b5563; font-weight: 700; font-size: 10px; }
+
+    /* Items layout */
+    .item-block { margin-bottom: 8.5px; }
+    .section-row { display: flex; justify-content: space-between; margin-bottom: 2px; align-items: baseline; gap: 8px; }
+    .item-title { font-weight: 800; color: #111827; font-size: 11.5px; }
+    .item-subtitle { font-weight: 500; font-style: italic; color: #6b7280; font-size: 10.5px; }
+    .item-date { font-size: 10px; font-weight: 600; color: #6b7280; white-space: nowrap; }
+    
+    .demo-link {
+      display: inline-block;
+      color: #2563eb;
+      font-size: 10px;
+      font-weight: 600;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .demo-link:hover { text-decoration: underline; }
+
+    ul { margin: 2.5px 0 5px 0; padding-left: 17px; color: #2d3748; }
+    li { margin-bottom: 2.5px; line-height: 1.42; font-size: 10.5px; }
+    
+    .cert-details { font-style: italic; color: #4b5563; font-size: 10px; margin-top: 1px; }
+    .score-badge { font-size: 10px; color: #111827; font-weight: 600; margin-top: 2px; display: inline-block; }
   </style>
   <script>
     function paginate() {
@@ -679,84 +824,100 @@ export const ResumeBuilder: React.FC = () => {
 <body>
   <div id="scale-wrapper">
     <div class="header">
-    <h2>${personal.fullName || 'Candidate Name'}</h2>
-    ${personal.targetRole ? `<div style="font-size: 16px; font-weight: 700; color: #2563eb; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">${personal.targetRole}</div>` : (activeCompany?.jobTitle ? `<div style="font-size: 16px; font-weight: 700; color: #2563eb; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">${activeCompany.jobTitle}</div>` : '')}
-    <div class="contact-info">
-      ${personal.location ? `<span>${personal.location}</span>` : ''}
-      ${personal.location && (personal.phone || personal.email || personal.linkedIn || personal.github || personal.website) ? ' <span class="divider">•</span> ' : ''}
-      ${personal.phone ? `<span>${personal.phone}</span>` : ''}
-      ${personal.phone && (personal.email || personal.linkedIn || personal.github || personal.website) ? ' <span class="divider">•</span> ' : ''}
-      ${personal.email ? `<a href="mailto:${personal.email}">${personal.email}</a>` : ''}
-      ${personal.email && (personal.linkedIn || personal.github || personal.website) ? ' <span class="divider">•</span> ' : ''}
-      ${personal.linkedIn ? `<a href="${makeUrl(personal.linkedIn)}">${personal.linkedIn.replace(/^https?:\/\//, '').replace(/\/$/, '')}</a>` : ''}
-      ${personal.linkedIn && (personal.github || personal.website) ? ' <span class="divider">•</span> ' : ''}
-      ${personal.github ? `<a href="${makeUrl(personal.github)}">${personal.github.replace(/^https?:\/\/(www\.)?github\.com\//, '').replace(/\/$/, '')}</a>` : ''}
-      ${personal.github && personal.website ? ' <span class="divider">•</span> ' : ''}
-      ${personal.website ? `<a href="${makeUrl(personal.website)}">${personal.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}</a>` : ''}
-    </div>
-  </div>
-
-  ${editorState.summary ? `
-  <h2>Professional Summary</h2>
-  <p>${editorState.summary}</p>
-  ` : ''}
-
-  ${editorState.skills?.length > 0 ? `
-  <h2>Technical Skills</h2>
-  <div class="skills-list">
-    ${editorState.skills.map((s: string) => `<span class="skill-tag">${s}</span>`).join(' <span style="color:#9ca3af; font-weight:400">•</span> ')}
-  </div>
-  ` : ''}
-
-  ${editorState.experience?.length > 0 ? `
-  <h2>Professional Experience</h2>
-  ${editorState.experience.map((exp: any) => `
-    <div style="margin-bottom: 12px;">
-      <div class="section-row">
-        <div><span class="item-title">${exp.role}</span>${exp.company ? ` &nbsp;•&nbsp; <span class="item-subtitle">${exp.company}</span>` : ''}</div>
-        <div class="item-date">${exp.duration || ''}</div>
+      <h1 class="candidate-name">${personal.fullName || 'CANDIDATE NAME'}</h1>
+      ${personal.targetRole ? `<div class="role-title">${personal.targetRole}</div>` : (activeCompany?.jobTitle ? `<div class="role-title">${activeCompany.jobTitle}</div>` : '')}
+      <div class="contact-info">
+        ${personal.phone ? `<a href="tel:${personal.phone.replace(/[^+\d]/g, '')}">${personal.phone}</a>` : ''}
+        ${personal.phone && (personal.email || personal.location || personal.linkedIn || personal.github) ? '<span class="divider">|</span>' : ''}
+        ${personal.email ? `<a href="mailto:${personal.email}">${personal.email}</a>` : ''}
+        ${personal.email && (personal.location || personal.linkedIn || personal.github) ? '<span class="divider">|</span>' : ''}
+        ${personal.location ? `<span>${personal.location}</span>` : ''}
+        ${personal.location && (personal.linkedIn || personal.github) ? '<span class="divider">|</span>' : ''}
+        ${personal.linkedIn ? `<a href="${makeUrl(personal.linkedIn)}">${personal.linkedIn.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}</a>` : ''}
+        ${personal.linkedIn && personal.github ? '<span class="divider">|</span>' : ''}
+        ${personal.github ? `<a href="${makeUrl(personal.github)}">${personal.github.startsWith('http') ? personal.github.replace(/^https?:\/\/(www\.)?/, '') : (personal.github.includes('github.com') ? personal.github : `github.com/${personal.github}`)}</a>` : ''}
       </div>
+      <div class="header-divider-line"></div>
+    </div>
+
+    ${editorState.summary ? `
+    <h2 class="section-header">PROFILE</h2>
+    <p>${editorState.summary}</p>
+    ` : ''}
+
+    ${editorState.skills?.length > 0 ? `
+    <h2 class="section-header">SKILLS</h2>
+    ${renderSkills()}
+    ` : ''}
+
+    ${editorState.projects?.length > 0 ? `
+    <h2 class="section-header">DESIGN & DEVELOPMENT PROJECTS</h2>
+    ${editorState.projects.map((proj: any) => `
+      <div class="item-block">
+        <div class="section-row">
+          <div>
+            <span class="item-title">${proj.title}</span>
+            ${proj.techStack?.length ? `<span class="item-subtitle"> &nbsp;|&nbsp; ${proj.techStack.join(', ')}</span>` : ''}
+          </div>
+          ${proj.link ? `<div><a href="${makeUrl(proj.link)}" class="demo-link">${proj.link.includes('figma') ? 'Figma Prototype ->' : 'Live Demo ->'}</a></div>` : ''}
+        </div>
+        <ul>
+          ${proj.description ? proj.description.split('\n').filter((l: string) => l.trim()).map((l: string) => `<li>${l.replace(/^[-•*]\s*/, '').trim()}</li>`).join('') : ''}
+        </ul>
+      </div>
+    `).join('')}
+    ` : ''}
+
+    ${editorState.experience?.length > 0 ? `
+    <h2 class="section-header">PROFESSIONAL EXPERIENCE</h2>
+    ${editorState.experience.map((exp: any) => `
+      <div class="item-block">
+        <div class="section-row">
+          <div><span class="item-title">${exp.company || exp.role}</span>${exp.company ? ` <span style="color:#6b7280; font-weight:400">—</span> <span class="item-title">${exp.role}</span>` : ''}</div>
+          <div class="item-date">${exp.duration || ''}</div>
+        </div>
+        <ul>
+          ${exp.description ? exp.description.split('\n')
+        .map((l: string) => l.replace(/^[-•*]\s*/, '').replace(/(SITUATION|TASK|ACTION|RESULT):?\s*/gi, '').trim())
+        .filter((l: string) => l.length > 5)
+        .slice(0, 3)
+        .map((l: string) => `<li>${l}</li>`).join('') : ''}
+        </ul>
+      </div>
+    `).join('')}
+    ` : ''}
+
+    ${editorState.certifications?.length > 0 || editorState.achievements?.length > 0 ? `
+    <h2 class="section-header">CERTIFICATIONS</h2>
+    ${editorState.certifications?.length > 0 ? editorState.certifications.map((cert: any) => `
+      <div class="item-block" style="margin-bottom: 6px;">
+        <div class="section-row">
+          <div><span class="item-title">${cert.title || cert.name || cert}</span>${cert.issuer ? ` <span class="item-subtitle">— ${cert.issuer}</span>` : ''}</div>
+          ${cert.date ? `<div class="item-date">${cert.date}</div>` : ''}
+        </div>
+        ${cert.details ? `<div class="cert-details">${cert.details}</div>` : ''}
+      </div>
+    `).join('') : ''}
+    ${editorState.achievements?.length > 0 ? `
       <ul>
-        ${exp.description ? exp.description.split('\n').filter((l: string) => l.trim()).map((l: string) => `<li>${l.replace(/^[-•*]\s*/, '').trim()}</li>`).join('') : ''}
+        ${editorState.achievements.map((ach: string) => `<li>${ach.replace(/^[-•*]\s*/, '').trim()}</li>`).join('')}
       </ul>
-    </div>
-  `).join('')}
-  ` : ''}
+    ` : ''}
+    ` : ''}
 
-  ${editorState.projects?.length > 0 ? `
-  <h2>Projects</h2>
-  ${editorState.projects.map((proj: any) => `
-    <div style="margin-bottom: 12px;">
-      <div class="section-row">
-        <div><span class="item-title">${proj.title}</span>${proj.link ? `<span style="margin-left:6px; font-size:11px"><a href="${makeUrl(proj.link)}">Live Demo</a></span>` : ''}</div>
+    ${editorState.education?.length > 0 ? `
+    <h2 class="section-header">EDUCATION</h2>
+    ${editorState.education.map((edu: any) => `
+      <div class="item-block" style="margin-bottom: 6px;">
+        <div class="section-row">
+          <div><span class="item-title">${edu.degree}</span>${edu.institution ? ` <span class="item-subtitle">— ${edu.institution}</span>` : ''}</div>
+          <div class="item-date">${edu.duration || ''}</div>
+        </div>
+        ${edu.details ? `<div class="score-badge">${edu.details.replace(/^Score:\s*/i, '')}</div>` : ''}
       </div>
-      ${proj.techStack?.length ? `<div class="tech-stack">Built with: ${proj.techStack.join(', ')}</div>` : ''}
-      <ul>
-        ${proj.description ? proj.description.split('\n').filter((l: string) => l.trim()).map((l: string) => `<li>${l.replace(/^[-•*]\s*/, '').trim()}</li>`).join('') : ''}
-      </ul>
-    </div>
-  `).join('')}
-  ` : ''}
+    `).join('')}
+    ` : ''}
 
-  ${editorState.education?.length > 0 ? `
-  <h2>Education</h2>
-  ${editorState.education.map((edu: any) => `
-    <div style="margin-bottom: 10px;">
-      <div class="section-row">
-        <div><span class="item-title">${edu.degree}</span>${edu.institution ? ` &nbsp;•&nbsp; <span class="item-subtitle">${edu.institution}</span>` : ''}</div>
-        <div class="item-date">${edu.duration || ''}</div>
-      </div>
-      ${edu.details ? `<div class="score-badge">${edu.details.replace(/^Score:\s*/i, '')}</div>` : ''}
-    </div>
-  `).join('')}
-  ` : ''}
-  
-  ${editorState.achievements?.length ? `
-  <h2>Certifications & Achievements</h2>
-  <ul style="margin-bottom: 0;">
-    ${editorState.achievements.map((ach: string) => `<li>${ach.replace(/^[-•*]\s*/, '').trim()}</li>`).join('')}
-  </ul>
-  ` : ''}
   </div>
 </body>
 </html>
@@ -916,20 +1077,136 @@ export const ResumeBuilder: React.FC = () => {
 
   const handleExportDOCX = () => {
     if (!activeResume) return;
-    const docHtml = generateHTMLTemplate();
-    const blob = new Blob(['\ufeff', docHtml], { type: 'application/msword' });
+
+    const personal = editorState.personalInfo;
+    const candidateName = personal.fullName || 'Candidate';
+    const roleName = personal.targetRole || activeCompany?.jobTitle || '';
+
+    // Create standalone HTML string structured specifically for MS Word and Google Docs compatibility
+    const headerContent = `
+      <div style="text-align: center; margin-bottom: 12px;">
+        <h1 style="font-size: 22pt; font-family: Arial, sans-serif; font-weight: bold; margin: 0 0 4pt 0; text-transform: uppercase; color: #111827;">${candidateName}</h1>
+        ${roleName ? `<div style="font-size: 11pt; font-family: Arial, sans-serif; font-weight: bold; margin-bottom: 6pt; text-transform: uppercase; color: #111827;">${roleName}</div>` : ''}
+        <div style="font-size: 9.5pt; font-family: Arial, sans-serif; color: #4b5563;">
+          ${personal.phone ? `<a href="tel:${personal.phone.replace(/[^+\d]/g, '')}" style="color: #2563eb; text-decoration: none;">${personal.phone}</a>` : ''}
+          ${personal.phone && personal.email ? ' | ' : ''}
+          ${personal.email ? `<a href="mailto:${personal.email}" style="color: #2563eb; text-decoration: none;">${personal.email}</a>` : ''}
+          ${(personal.phone || personal.email) && personal.location ? ' | ' : ''}
+          ${personal.location ? `<span>${personal.location}</span>` : ''}
+          ${(personal.phone || personal.email || personal.location) && personal.linkedIn ? ' | ' : ''}
+          ${personal.linkedIn ? `<a href="${makeUrl(personal.linkedIn)}" style="color: #2563eb; text-decoration: none;">${personal.linkedIn.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}</a>` : ''}
+          ${(personal.phone || personal.email || personal.location || personal.linkedIn) && personal.github ? ' | ' : ''}
+          ${personal.github ? `<a href="${makeUrl(personal.github)}" style="color: #2563eb; text-decoration: none;">${personal.github.startsWith('http') ? personal.github.replace(/^https?:\/\/(www\.)?/, '') : (personal.github.includes('github.com') ? personal.github : `github.com/${personal.github}`)}</a>` : ''}
+        </div>
+        <hr style="border: none; border-top: 1.5pt solid #111827; margin-top: 8pt; margin-bottom: 12pt;" />
+      </div>
+    `;
+
+    const bodyContent = `
+      ${editorState.summary ? `
+        <h2 style="font-size: 11pt; font-family: Arial, sans-serif; font-weight: bold; text-transform: uppercase; border-bottom: 1.5pt solid #111827; padding-bottom: 2pt; margin-top: 10pt; margin-bottom: 4pt; color: #111827;">PROFILE</h2>
+        <p style="font-size: 10pt; font-family: Arial, sans-serif; line-height: 1.4; color: #2d3748; margin: 4pt 0;">${editorState.summary}</p>
+      ` : ''}
+
+      ${editorState.skills?.length > 0 ? `
+        <h2 style="font-size: 11pt; font-family: Arial, sans-serif; font-weight: bold; text-transform: uppercase; border-bottom: 1.5pt solid #111827; padding-bottom: 2pt; margin-top: 10pt; margin-bottom: 4pt; color: #111827;">SKILLS</h2>
+        <p style="font-size: 10pt; font-family: Arial, sans-serif; line-height: 1.4; color: #2d3748; margin: 4pt 0;">${editorState.skills.join(', ')}</p>
+      ` : ''}
+
+      ${editorState.projects?.length > 0 ? `
+        <h2 style="font-size: 11pt; font-family: Arial, sans-serif; font-weight: bold; text-transform: uppercase; border-bottom: 1.5pt solid #111827; padding-bottom: 2pt; margin-top: 10pt; margin-bottom: 4pt; color: #111827;">DESIGN & DEVELOPMENT PROJECTS</h2>
+        ${editorState.projects.map((proj: any) => `
+          <div style="margin-bottom: 8pt;">
+            <div style="font-size: 10.5pt; font-family: Arial, sans-serif; color: #111827;">
+              <strong>${proj.title}</strong> ${proj.techStack?.length ? `<span style="color: #6b7280; font-style: italic;"> | ${proj.techStack.join(', ')}</span>` : ''}
+              ${proj.link ? ` &nbsp; <a href="${makeUrl(proj.link)}" style="color: #2563eb; text-decoration: none; font-weight: bold;">[Live Demo]</a>` : ''}
+            </div>
+            <ul style="margin: 3pt 0; padding-left: 18pt; font-size: 9.5pt; font-family: Arial, sans-serif; color: #2d3748;">
+              ${proj.description ? proj.description.split('\n').filter((l: string) => l.trim()).map((l: string) => `<li style="margin-bottom: 2pt;">${l.replace(/^[-•*]\s*/, '').trim()}</li>`).join('') : ''}
+            </ul>
+          </div>
+        `).join('')}
+      ` : ''}
+
+      ${editorState.experience?.length > 0 ? `
+        <h2 style="font-size: 11pt; font-family: Arial, sans-serif; font-weight: bold; text-transform: uppercase; border-bottom: 1.5pt solid #111827; padding-bottom: 2pt; margin-top: 10pt; margin-bottom: 4pt; color: #111827;">PROFESSIONAL EXPERIENCE</h2>
+        ${editorState.experience.map((exp: any) => `
+          <div style="margin-bottom: 8pt;">
+            <div style="font-size: 10.5pt; font-family: Arial, sans-serif;">
+              <strong style="color: #111827;">${exp.company || exp.role}</strong> ${exp.company ? ` — <strong style="color: #111827;">${exp.role}</strong>` : ''}
+              <span style="float: right; font-weight: bold; color: #6b7280; font-size: 9.5pt;">${exp.duration || ''}</span>
+            </div>
+            <ul style="margin: 3pt 0; padding-left: 18pt; font-size: 9.5pt; font-family: Arial, sans-serif; color: #2d3748;">
+              ${exp.description ? exp.description.split('\n')
+                .map((l: string) => l.replace(/^[-•*]\s*/, '').replace(/(SITUATION|TASK|ACTION|RESULT):?\s*/gi, '').trim())
+                .filter((l: string) => l.length > 3)
+                .map((l: string) => `<li style="margin-bottom: 2pt;">${l}</li>`).join('') : ''}
+            </ul>
+          </div>
+        `).join('')}
+      ` : ''}
+
+      ${editorState.education?.length > 0 ? `
+        <h2 style="font-size: 11pt; font-family: Arial, sans-serif; font-weight: bold; text-transform: uppercase; border-bottom: 1.5pt solid #111827; padding-bottom: 2pt; margin-top: 10pt; margin-bottom: 4pt; color: #111827;">EDUCATION</h2>
+        ${editorState.education.map((edu: any) => `
+          <div style="margin-bottom: 6pt; font-size: 10.5pt; font-family: Arial, sans-serif;">
+            <strong style="color: #111827;">${edu.degree}</strong> ${edu.institution ? ` — <em style="color: #6b7280;">${edu.institution}</em>` : ''}
+            <span style="float: right; font-weight: bold; color: #6b7280; font-size: 9.5pt;">${edu.duration || ''}</span>
+          </div>
+        `).join('')}
+      ` : ''}
+    `;
+
+    // Strict Word & Google Docs Office XML Wrapper
+    const wordDocumentXml = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' 
+            xmlns:w='urn:schemas-microsoft-com:office:word' 
+            xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset="utf-8">
+        <title>${candidateName}</title>
+        <!--[if gte mso 9]>
+        <xml>
+          <w:WordDocument>
+            <w:View>Print</w:View>
+            <w:Zoom>100</w:Zoom>
+            <w:DoNotOptimizeForCustomXLS/>
+          </w:WordDocument>
+        </xml>
+        <![endif]-->
+        <style>
+          @page WordSection1 { size: 595.3pt 841.9pt; margin: 36.0pt 36.0pt 36.0pt 36.0pt; }
+          div.WordSection1 { page: WordSection1; }
+          body { font-family: 'Arial', sans-serif; font-size: 10pt; color: #2d3748; }
+          a { color: #2563eb; text-decoration: none; }
+        </style>
+      </head>
+      <body>
+        <div class="WordSection1">
+          ${headerContent}
+          ${bodyContent}
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Send as application/msword with .doc extension so Google Docs & Word native parsers accept HTML doc format without corruption errors
+    const blob = new Blob(['\ufeff', wordDocumentXml], { 
+      type: 'application/msword;charset=utf-8' 
+    });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    const roleName = editorState.personalInfo?.targetRole || activeCompany?.jobTitle || '';
-    const candidateName = editorState.personalInfo?.fullName || 'Candidate';
-    const nameParts = [candidateName, roleName, 'ATS'].filter(Boolean);
+    
+    const nameParts = [candidateName, roleName, 'Resume'].filter(Boolean);
     const formattedFilename = nameParts.join('_').replace(/[\s\W]+/g, '_');
 
     link.download = `${formattedFilename}.doc`;
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    showToast('DOCX exported successfully!', 'success');
+    showToast('Word file exported! Compatible with Google Docs & MS Word.', 'success');
   };
 
   return (
@@ -1074,7 +1351,7 @@ export const ResumeBuilder: React.FC = () => {
                       <label className="block text-[10px] uppercase font-bold text-zinc-400 mb-1">Target Role / Job Title</label>
                       <input
                         type="text"
-                        value={editorState.personalInfo.targetRole || activeCompany?.jobTitle || ''}
+                        value={editorState.personalInfo?.targetRole ?? ''}
                         onChange={(e) => updatePersonalInfo('targetRole', e.target.value)}
                         placeholder="e.g. Full-Stack Engineer"
                         className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 p-2.5 text-xs outline-none dark:border-zinc-800 dark:bg-zinc-950 focus:bg-white dark:focus:bg-zinc-900"

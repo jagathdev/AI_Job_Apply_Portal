@@ -84,6 +84,7 @@ Return your response strictly as a JSON object with this structure:
 {
   "personalInfo": {
     "fullName": "Name",
+    "targetRole": "Target Job Title/Role",
     "email": "Email",
     "phone": "Phone number",
     "location": "Location",
@@ -144,6 +145,7 @@ You must return the rewritten resume in the exact same JSON format:
 {
   "personalInfo": {
     "fullName": "Name",
+    "targetRole": "Target Job Title/Role",
     "email": "Email",
     "phone": "Phone",
     "location": "Location",

@@ -66,15 +66,7 @@ const ResumeSchema = new Schema({
   name: { type: String, default: 'My Resume' },
   format: { type: String, default: 'pdf' },
   rawText: { type: String, default: '' },
-  personalInfo: {
-    fullName: { type: String, default: '' },
-    email: { type: String, default: '' },
-    phone: { type: String, default: '' },
-    location: { type: String, default: '' },
-    website: { type: String, default: '' },
-    linkedIn: { type: String, default: '' },
-    github: { type: String, default: '' }
-  },
+  personalInfo: { type: Schema.Types.Mixed, default: {} },
   summary: { type: String, default: '' },
   skills: { type: [String], default: [] },
   experience: [{

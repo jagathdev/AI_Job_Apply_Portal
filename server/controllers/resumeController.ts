@@ -128,6 +128,10 @@ export const updateResume = async (req: AuthRequest, res: Response) => {
 
   // Update fields dynamically
   Object.assign(resume, updateData);
+  if (updateData.personalInfo) {
+    resume.personalInfo = updateData.personalInfo;
+    resume.markModified('personalInfo');
+  }
   await resume.save();
 
   return res.status(200).json({
