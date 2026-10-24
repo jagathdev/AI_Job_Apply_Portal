@@ -1,4 +1,4 @@
-🤖 AI Job Apply Portal
+🤖 AI Job Apply Portal - Easy Analysis Job
 
 An AI-powered full-stack web application designed to simplify the job-search and application process by helping users analyze job descriptions, evaluate their profile against job requirements, and make better application decisions.
 
